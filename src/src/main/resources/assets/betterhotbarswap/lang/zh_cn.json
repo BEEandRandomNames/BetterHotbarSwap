@@ -1,0 +1,10 @@
+﻿{
+    "category.betterhotbarswap":  "BetterHotbarSwap",
+    "key.betterhotbarswap.settings":  "打开设置",
+    "betterhotbarswap.settings.title":  "BetterHotbarSwap 设置",
+    "betterhotbarswap.settings.hotbar_priority":  "快捷栏优先",
+    "betterhotbarswap.settings.shift_hotbar_pickup":  "Shift + 快捷栏拾取",
+    "betterhotbarswap.settings.crafting_output_swap":  "输出物快速交换",
+    "betterhotbarswap.settings.stack_first":  "优先堆叠到背包",
+    "betterhotbarswap.settings.close":  "完成"
+}

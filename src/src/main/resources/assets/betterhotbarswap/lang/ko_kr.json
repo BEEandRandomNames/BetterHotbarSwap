@@ -1,0 +1,10 @@
+﻿{
+    "category.betterhotbarswap":  "BetterHotbarSwap",
+    "key.betterhotbarswap.settings":  "설정 열기",
+    "betterhotbarswap.settings.title":  "BetterHotbarSwap 설정",
+    "betterhotbarswap.settings.hotbar_priority":  "핫바 우선",
+    "betterhotbarswap.settings.shift_hotbar_pickup":  "Shift + 핫바 줍기",
+    "betterhotbarswap.settings.crafting_output_swap":  "제작 결과 빠른 교체",
+    "betterhotbarswap.settings.stack_first":  "먼저 인벤토리에 쌓기",
+    "betterhotbarswap.settings.close":  "완료"
+}

@@ -1,0 +1,10 @@
+﻿{
+    "category.betterhotbarswap":  "BetterHotbarSwap",
+    "key.betterhotbarswap.settings":  "Ouvrir les paramètres",
+    "betterhotbarswap.settings.title":  "Paramètres BetterHotbarSwap",
+    "betterhotbarswap.settings.hotbar_priority":  "Priorité de la barre rapide",
+    "betterhotbarswap.settings.shift_hotbar_pickup":  "Ramassage Maj + barre rapide",
+    "betterhotbarswap.settings.crafting_output_swap":  "Échange rapide de sortie",
+    "betterhotbarswap.settings.stack_first":  "Empiler d\u0027abord dans l\u0027inventaire",
+    "betterhotbarswap.settings.close":  "Terminé"
+}

@@ -1,0 +1,10 @@
+﻿{
+    "category.betterhotbarswap":  "BetterHotbarSwap",
+    "key.betterhotbarswap.settings":  "Open Settings",
+    "betterhotbarswap.settings.title":  "BetterHotbarSwap Settings",
+    "betterhotbarswap.settings.hotbar_priority":  "Hotbar Priority",
+    "betterhotbarswap.settings.shift_hotbar_pickup":  "Shift + Hotbar Pickup",
+    "betterhotbarswap.settings.crafting_output_swap":  "Crafting Output Quick-Swap",
+    "betterhotbarswap.settings.stack_first":  "Stack to Inventory First",
+    "betterhotbarswap.settings.close":  "Done"
+}

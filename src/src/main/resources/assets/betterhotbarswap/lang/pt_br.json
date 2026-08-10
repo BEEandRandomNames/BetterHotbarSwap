@@ -1,0 +1,10 @@
+﻿{
+    "category.betterhotbarswap":  "BetterHotbarSwap",
+    "key.betterhotbarswap.settings":  "Abrir configurações",
+    "betterhotbarswap.settings.title":  "Configurações do BetterHotbarSwap",
+    "betterhotbarswap.settings.hotbar_priority":  "Prioridade da barra rápida",
+    "betterhotbarswap.settings.shift_hotbar_pickup":  "Pegar com Shift + barra rápida",
+    "betterhotbarswap.settings.crafting_output_swap":  "Troca rápida da saída de criação",
+    "betterhotbarswap.settings.stack_first":  "Empilhar primeiro no inventário",
+    "betterhotbarswap.settings.close":  "Concluído"
+}

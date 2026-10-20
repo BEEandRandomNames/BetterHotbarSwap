@@ -42,26 +42,45 @@ public final class HotbarInputController {
 
     public static void releasePressed(int keyCode) {
         downKeys.remove(keyCode);
-        if (keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_SHIFT
-            || keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT_SHIFT) {
-            shiftLatch = false;
+        heldKeys.remove(keyCode);
+        if (isShiftKey(keyCode)) {
+            shiftLatch = heldKeys.contains(org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_SHIFT)
+                || heldKeys.contains(org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT_SHIFT);
         }
     }
 
-    public static boolean isShiftLatched() {
-        return shiftLatch;
+    // Fiziksel basılı tuşlar (KeyboardReleaseMixin PRESS/RELEASE). TTL YOK:
+    // OS tuş-tekrarı sadece SON basılan tuşu tekrarlar (N sonra Shift = N tekrarsız),
+    // bu yüzden "basılı mı" bilgisi tekrar olaylarından değil bas/bırak'tan gelir.
+    private static final java.util.HashSet<Integer> heldKeys = new java.util.HashSet<>();
+
+    // Ekran açılmadan önce basılan Shift/kısayol da yakalanır (latch ekran-bağımsız).
+    public static void physicalPress(int keyCode, int scanCode) {
+        heldKeys.add(keyCode);
+        if (isShiftKey(keyCode)) {
+            shiftLatch = true;
+            return;
+        }
+        int hb = hotbarIndex(MinecraftClient.getInstance(), keyCode, scanCode);
+        if (hb >= 0 && hb <= 9) {
+            lastHotkey = keyCode;
+            lastHotbar = hb;
+        }
     }
 
-    public static int latchedHotkey() {
-        return lastHotkey;
+    private static boolean isShiftKey(int keyCode) {
+        return keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_SHIFT
+            || keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT_SHIFT;
     }
 
     public static int latchedHotbar() {
         return lastHotbar;
     }
 
-    public static boolean isLatchedHeld() {
-        return lastHotkey >= 0 && downKeys.containsKey(lastHotkey);
+    // Düzenli toplama modu: Shift + kısayol (0-9) şu an FİZİKSEL olarak basılı.
+    public static boolean isTidyHeld() {
+        return shiftLatch && lastHotkey >= 0 && lastHotbar >= 0 && lastHotbar <= 9
+            && heldKeys.contains(lastHotkey);
     }
 
     // Bug #30: secili slot ASLA degismez. SWAP/PICKUP/drop yan etkisiyle
@@ -216,6 +235,36 @@ public final class HotbarInputController {
             BHSDebug.log("PASS creative-tab not-assignable " + BHSDebug.describeSlot(focusedSlot, MinecraftClient.getInstance().player));
             return false;
         }
+        // Düzenli toplama (F6): Shift + kısayol ile GÖSTERİLEN depo yığını
+        // alınır (fare-güdümlü; oto-drain YOK). Her olay bağımsız alımdır:
+        // bas, gezdirerek tara, bırak. Duvar kuralı ziyaret kapsamlıdır.
+        // Yerleşmezse yutulur + mesaj (vanilla'ya düşülmez, imleç temizdir).
+        if (BHSConfig.tidyCollect && hotbarIndex <= 9 && shiftHeld && TidyCollect.isTidyScreen(handler)) {
+            if (TidyCollect.canTake(handler, focusedSlot)) {
+                int takeResult = TidyCollect.tryTake(handler, focusedSlot, hotbarIndex);
+                if (takeResult == TidyCollect.TAKE_PLACED) {
+                    restoreSelectionIfChanged(MinecraftClient.getInstance(), prevSel);
+                    markPressed(keyCode);
+                    lastSwapNanos = System.nanoTime();
+                    BHSDebug.log("SWAP-TRY " + BHSDebug.describeSlot(focusedSlot, MinecraftClient.getInstance().player)
+                        + " key->hotbar" + (hotbarIndex + 1) + " result=tidy -> " + TidyCollect.slotName(TidyCollect.lastDest()));
+                    return true;
+                }
+                if (takeResult == TidyCollect.TAKE_FAILED) {
+                    TidyCollect.tellFull(MinecraftClient.getInstance());
+                }
+                markPressed(keyCode);
+                return true;
+            }
+            // Mod ARMED, ama fare alınabilir depo yığınında değil (boş sandık
+            // slotu / oyuncu slotu): vanilla takası YUTULUR. Yoksa hareketi
+            // başlatan basış hotbar[N] eşyasını sandığa iter / envanteri karıştırır.
+            // "0" (main-only) bu kuraldan muaf: kendi akışına devam eder.
+            if (hotbarIndex <= 8) {
+                if (!repeat) BHSDebug.log("TIDY armed -> vanilla takas yutuldu " + BHSDebug.describeSlot(focusedSlot, MinecraftClient.getInstance().player));
+                return true;
+            }
+        }
         if (SlotClassifier.isAssignableSlot(focusedSlot, MinecraftClient.getInstance().player)) {
             // Shift + Kısayol bulk: output slotta Shift ile basılınca ilk alım +
             // tick-tekrarlayıcı (output boşalana kadar). Config kapalıysa normal tek alım.
@@ -235,26 +284,6 @@ public final class HotbarInputController {
                 }
             } catch (Exception e) {
                 BHSDebug.log("SHIFT-ERR out-log " + e);
-            }
-            // Düzenli toplama (F6): Shift + kısayol ile GÖSTERİLEN depo yığını
-            // alınır (fare-güdümlü; oto-drain YOK). Her olay bağımsız alımdır:
-            // bas, gezdirerek tara, bırak. Duvar kuralı ziyaret kapsamlıdır.
-            // Yerleşmezse yutulur + mesaj (vanilla'ya düşülmez, imleç temizdir).
-            if (BHSConfig.tidyCollect && hotbarIndex != 10 && shiftHeld && TidyCollect.canTake(handler, focusedSlot)) {
-                int takeResult = TidyCollect.tryTake(handler, focusedSlot, hotbarIndex);
-                if (takeResult == TidyCollect.TAKE_PLACED) {
-                    restoreSelectionIfChanged(MinecraftClient.getInstance(), prevSel);
-                    markPressed(keyCode);
-                    lastSwapNanos = System.nanoTime();
-                    BHSDebug.log("SWAP-TRY " + BHSDebug.describeSlot(focusedSlot, MinecraftClient.getInstance().player)
-                        + " key->hotbar" + (hotbarIndex + 1) + " result=tidy -> " + TidyCollect.slotName(TidyCollect.lastDest()));
-                    return true;
-                }
-                if (takeResult == TidyCollect.TAKE_FAILED) {
-                    TidyCollect.tellFull(MinecraftClient.getInstance());
-                }
-                markPressed(keyCode);
-                return true;
             }
             // Oturumsuz + boş-slot tekrarları sessiz yutulur (biten hold'un
             // artçıları; taze basış yukarıda loglanır).

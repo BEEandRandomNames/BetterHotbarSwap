@@ -6,7 +6,7 @@
   "client": [
     "HandledScreenAccessor",
     "HandledScreenInputMixin",
-    "HandledScreenMouseMixin",
+    "ClientInteractionQuickMoveMixin",
     "CreativeInventoryScreenHotbarMixin",
     "KeyboardReleaseMixin"
   ],

@@ -2,7 +2,6 @@ package com.betterhotbarswap.client.input;
 
 import com.betterhotbarswap.client.debug.BHSDebug;
 import com.betterhotbarswap.config.BHSConfig;
-import com.betterhotbarswap.mixin.HandledScreenAccessor;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.ItemStack;
@@ -148,37 +147,57 @@ public final class TidyCollect {
         }
     }
 
-    // Fareyle seçerek alma: Shift+kısayol basılıyken depo slotuna SOL tık ->
-    // yığın tidy sıraya gider (vanilla PICKUP iptal edilir, kavga biter).
-    // Yerleşmezse false (vanilla normal alır, kullanıcı eline alır).
-    // NOT: dönüş değeri vanilla-iptal kararıdır (true = iptal).
-    public static boolean handleClick(net.minecraft.client.gui.screen.ingame.HandledScreen<?> screen, int button) {
+    // Düzenli toplama aktif olabilecek ekran mı? (saf-depo, creative değil)
+    public static boolean isTidyScreen(ScreenHandler h) {
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client == null || client.player == null || h == null) return false;
+        if (client.currentScreen instanceof net.minecraft.client.gui.screen.ingame.CreativeInventoryScreen) return false;
+        return isPureStorage(h, client.player.getInventory());
+    }
+
+    private static boolean inRedirect;
+
+    // EVRENSEL tık yolu: Shift + kısayol fiziksel basılıyken depo slotundan gelen
+    // HER QUICK_MOVE (vanilla Shift+tık, Shift+çift-tık "hepsini topla",
+    // Mouse Tweaks/benzeri modların Shift-sürüklemesi) tidy sıraya yönlendirilir.
+    // Hepsi ClientPlayerInteractionManager.clickSlot'tan geçer (javap doğrulandı),
+    // bu yüzden tek kapı yeter; ekran/mod sınıfına bakılmaz.
+    // true = vanilla QUICK_MOVE iptal (alındı YA DA yer yok); asla sola dolmaz.
+    // Kapı (gateOpen) YOK: her tık bilinçli kullanıcı hareketidir; çift-tık
+    // döngüsü aynı karede N yığın üretir ve her birinin alınması gerekir.
+    public static boolean redirectQuickMove(int syncId, int slotId) {
+        if (inRedirect) return false;
         try {
-            if (button != 0) return false;
-            if (!HotbarInputController.isShiftLatched() || !HotbarInputController.isLatchedHeld()) return false;
+            if (!BHSConfig.tidyCollect || !HotbarInputController.isTidyHeld()) return false;
             MinecraftClient client = MinecraftClient.getInstance();
             if (client == null || client.player == null || client.interactionManager == null) return false;
-            if (screen.getScreenHandler() != client.player.currentScreenHandler) return false;
-            if (!screen.getScreenHandler().getCursorStack().isEmpty()) return false;
-            Slot hovered = ((HandledScreenAccessor) screen).betterhotbarswap$getFocusedSlot();
-            if (hovered == null || hovered.inventory == null) return false;
-            if (hovered.inventory == client.player.getInventory()) return false;
-            if (!hovered.hasStack() || !hovered.canTakeItems(client.player)) return false;
-            if (SlotClassifier.isProbableOutputSlot(hovered, client.player, false)) return false;
+            ScreenHandler h = client.player.currentScreenHandler;
+            if (h == null || h.syncId != syncId || slotId < 0 || slotId >= h.slots.size()) return false;
+            if (!isTidyScreen(h)) return false;
+            Slot slot = h.getSlot(slotId);
+            if (!canTake(h, slot)) return false;
             int anchor = HotbarInputController.latchedHotbar();
-            if (anchor < 0 || anchor > 9) return false;
-            ItemStack pre = hovered.getStack().copy();
-            resetWall(screen.getScreenHandler());
-            List<Integer> order = buildOrder(anchor);
-            if (!gateOpen(anchor, hovered.id)
-                || !takeStackIntoOrder(client, client.player.getInventory(), hovered, anchor, order, !wallClaimed[anchor])) {
-                return false;
+            inRedirect = true;
+            int prevSel = client.player.getInventory().selectedSlot;
+            ItemStack pre = slot.getStack().copy();
+            resetWall(h);
+            boolean ok = takeStackIntoOrder(client, client.player.getInventory(), slot, anchor,
+                buildOrder(anchor), !wallClaimed[anchor]);
+            HotbarInputController.restoreSelectionIfChanged(client, prevSel);
+            if (ok) {
+                wallClaimed[anchor] = true;
+                BHSDebug.log("TIDY al-qm x" + pre.getCount() + " -> " + slotName(lastTakenDest));
+            } else {
+                tellFull(client);
             }
-            wallClaimed[anchor] = true;
-            BHSDebug.log("TIDY al-klik x" + pre.getCount() + " -> " + slotName(lastTakenDest));
             return true;
         } catch (Exception e) {
-            return false;
+            BHSDebug.log("TIDY qm-hata " + e);
+            // Paket gönderilmeye başlandıysa vanilla'yı ARTIK çalıştırma (çift işlem).
+            boolean started = inRedirect;
+            return started;
+        } finally {
+            inRedirect = false;
         }
     }
 
@@ -266,8 +285,10 @@ public final class TidyCollect {
         try {
             int need = stack.getCount();
             int evIdx = -1;
+            // Sıranın ilk elemanı (anchor=9 "0" modunda ilk eleman m35'tir, anchor değil).
+            int first = order.get(0);
             if (forceAnchor) {
-                ItemStack cur = inv.getStack(anchor);
+                ItemStack cur = inv.getStack(first);
                 if (!cur.isEmpty() && !isSame(cur, stack)) {
                     for (int oi = 1; oi < order.size(); oi++) {
                         if (inv.getStack(order.get(oi)).isEmpty()) {
@@ -282,7 +303,7 @@ public final class TidyCollect {
             for (int oi = 0; oi < order.size(); oi++) {
                 int idx = order.get(oi);
                 if (idx == evIdx) continue;
-                ItemStack d = (idx == anchor && evIdx != -1) ? ItemStack.EMPTY : inv.getStack(idx);
+                ItemStack d = (idx == first && evIdx != -1) ? ItemStack.EMPTY : inv.getStack(idx);
                 if (d.isEmpty()) cap += stack.getMaxCount();
                 else if (isSame(d, stack)) cap += Math.max(0, d.getMaxCount() - d.getCount());
                 if (cap >= need) return true;

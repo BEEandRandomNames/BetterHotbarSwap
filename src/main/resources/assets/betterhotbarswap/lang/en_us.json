@@ -1,10 +1,11 @@
 {
   "category.betterhotbarswap": "BetterHotbarSwap",
   "key.betterhotbarswap.settings": "Open Settings",
+  "key.betterhotbarswap.hotbar10": "Slot 10 (Inventory Only)",
   "betterhotbarswap.settings.title": "BetterHotbarSwap Settings",
   "betterhotbarswap.settings.hotbar_priority": "Hotbar Priority",
-  "betterhotbarswap.settings.shift_hotbar_pickup": "Shift + Hotbar Pickup",
-  "betterhotbarswap.settings.crafting_output_swap": "Crafting Output Quick-Swap",
-  "betterhotbarswap.settings.stack_first": "Stack to Inventory First",
+  "betterhotbarswap.settings.shift_hotbar_pickup": "Shift + Hotkey",
+  "betterhotbarswap.settings.debug": "Debug Mode",
+  "betterhotbarswap.settings.tidy_collect": "Tidy Collecting",
   "betterhotbarswap.settings.close": "Done"
 }

@@ -19,8 +19,8 @@ public final class BHSConfig {
 
     public static boolean hotbarPriority = true;
     public static boolean shiftHotbarPickup = true;
-    public static boolean craftingOutputQuickSwap = true;
-    public static boolean stackToInventoryFirst = true;
+    public static boolean debugEnabled = true;
+    public static boolean tidyCollect = true;
 
     private BHSConfig() {
     }
@@ -31,8 +31,8 @@ public final class BHSConfig {
                 JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();
                 hotbarPriority = getBoolean(json, "hotbarPriority", true);
                 shiftHotbarPickup = getBoolean(json, "shiftHotbarPickup", true);
-                craftingOutputQuickSwap = getBoolean(json, "craftingOutputQuickSwap", true);
-                stackToInventoryFirst = getBoolean(json, "stackToInventoryFirst", true);
+                debugEnabled = getBoolean(json, "debugEnabled", true);
+                tidyCollect = getBoolean(json, "tidyCollect", true);
             } catch (Exception exception) {
                 BetterHotbarSwap.LOGGER.warn("Failed to load config, using defaults.", exception);
             }
@@ -44,8 +44,8 @@ public final class BHSConfig {
         JsonObject json = new JsonObject();
         json.addProperty("hotbarPriority", hotbarPriority);
         json.addProperty("shiftHotbarPickup", shiftHotbarPickup);
-        json.addProperty("craftingOutputQuickSwap", craftingOutputQuickSwap);
-        json.addProperty("stackToInventoryFirst", stackToInventoryFirst);
+        json.addProperty("debugEnabled", debugEnabled);
+        json.addProperty("tidyCollect", tidyCollect);
 
         try {
             Files.createDirectories(CONFIG_PATH.getParent());

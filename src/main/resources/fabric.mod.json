@@ -11,6 +11,9 @@
   "entrypoints": {
     "client": [
       "com.betterhotbarswap.client.BetterHotbarSwapClient"
+    ],
+    "modmenu": [
+      "com.betterhotbarswap.integration.ModMenuIntegration"
     ]
   },
   "mixins": [

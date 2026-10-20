@@ -11,15 +11,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public abstract class HandledScreenInputMixin {
     @Inject(method = "keyPressed", at = @At("HEAD"), cancellable = true)
     private void betterhotbarswap$keyPressed(int keyCode, int scanCode, int modifiers, CallbackInfoReturnable<Boolean> cir) {
-        if (HotbarInputController.onKeyPressed((HandledScreen<?>) (Object) this, keyCode, scanCode)) {
-            cir.setReturnValue(true);
-        }
-    }
-
-
-    @Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true)
-    private void betterhotbarswap$mouseClicked(double mouseX, double mouseY, int button, CallbackInfoReturnable<Boolean> cir) {
-        if (HotbarInputController.onMouseClicked((HandledScreen<?>) (Object) this, button)) {
+        // Tek-aktor kurali (#12): Creative ekranin sahibi CreativeMixin'dir.
+        // Cift SWAP engellenir; liste sekmelerinde vanilla korunur.
+        if ((Object) this instanceof net.minecraft.client.gui.screen.ingame.CreativeInventoryScreen) return;
+        if (HotbarInputController.onKeyPressed((HandledScreen<?>) (Object) this, keyCode, scanCode, modifiers)) {
             cir.setReturnValue(true);
         }
     }

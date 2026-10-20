@@ -35,7 +35,3 @@ Thumbs.db
 *.tmp
 *.temp
 .cache/
-
-# Sensitive files (auto-detected)
-build
-build.gradle

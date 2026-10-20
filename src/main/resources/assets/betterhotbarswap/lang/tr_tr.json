@@ -1,10 +1,11 @@
 {
   "category.betterhotbarswap": "BetterHotbarSwap",
   "key.betterhotbarswap.settings": "Ayarları Aç",
+  "key.betterhotbarswap.hotbar10": "10. Yuva (Sadece Envanter)",
   "betterhotbarswap.settings.title": "BetterHotbarSwap Ayarları",
   "betterhotbarswap.settings.hotbar_priority": "Hotbar Önceliği",
-  "betterhotbarswap.settings.shift_hotbar_pickup": "Shift + Hotbar Alma",
-  "betterhotbarswap.settings.crafting_output_swap": "Üretim Çıkışını Hotbar'a Al",
-  "betterhotbarswap.settings.stack_first": "Önce Envantere Stackle",
+  "betterhotbarswap.settings.shift_hotbar_pickup": "Shift + Kısayol tuşu",
+  "betterhotbarswap.settings.debug": "Debug Modu",
+  "betterhotbarswap.settings.tidy_collect": "Düzenli toplama",
   "betterhotbarswap.settings.close": "Tamam"
 }

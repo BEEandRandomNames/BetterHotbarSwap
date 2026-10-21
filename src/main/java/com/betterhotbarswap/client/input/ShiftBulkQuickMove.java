@@ -31,6 +31,10 @@ public final class ShiftBulkQuickMove {
     private static String lastProgressKey = "";
     private static int stuckTicks;
     private static long lastStallMsgMs;
+    // İmleç ancak birkaç tick kalıcıysa gerçektir (sunucu düzeltmesi 1-2 tick'te gelir);
+    // hayalet imlece göre "kurtarma" PICKUP'ı sunucuda dolu slotu imlece çekebilir (#46).
+    private static int carriedTicks;
+    private static final int CARRIED_CONFIRM = 3;
     // Kaynak-governor (anti-dupe yapısal sigorta): bulk alımları girdiyi
     // tüketmek ZORUNDADIR. Belli sürede girdi azalmadıysa kaynak tükenmeyen
     // (sonsuz) kaynaktır -> DUR. Eski tahmin kalıntıları da bu yüzden durur.
@@ -72,6 +76,7 @@ public final class ShiftBulkQuickMove {
         itemKey = keyOf(anchor);
         actions = 0;
         ticks = 0;
+        carriedTicks = 0;
         stableTicks = 0;
         settled = false;
         lastProgressKey = "";
@@ -97,7 +102,11 @@ public final class ShiftBulkQuickMove {
             return;
         }
         PlayerInventory inv0 = client.player.getInventory();
-        if (!handler.getCursorStack().isEmpty()) {
+        if (handler.getCursorStack().isEmpty()) {
+            carriedTicks = 0;
+        } else if (++carriedTicks < CARRIED_CONFIRM) {
+            return;
+        } else {
             // İmleç kurtarma (SADECE bulk sırasında): en yakın boşa yerleştir
             // + DUR. Kullanıcının elindeki de olsa en güvenli yer boş slottur;
             // sessizce imleçte bırakmaktan iyidir. Boş yoksa dokunulmaz.

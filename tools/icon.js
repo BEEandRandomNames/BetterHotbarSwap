@@ -89,10 +89,10 @@ outline(26, 29, 37, 39, '#3ECF3E', '#1E6B1E', '#C6C6C6');
 // Hotbar: 1 = kaymış tahta kazma, 2 = seçili + taş kazma, 3 = boş (referans görsel).
 slot(4, 41, 21, 58); slot(23, 41, 40, 58); slot(42, 41, 59, 58);
 rect(22, 40, 41, 40, '#FFFFFF'); rect(22, 59, 41, 59, '#FFFFFF'); rect(22, 40, 22, 59, '#FFFFFF'); rect(41, 40, 41, 59, '#FFFFFF');
-// Kayma efekti (2 -> 1): solan hayalet kopyalardan akıcı, güçlü hareket izi. 2px
-// aralıklı 8 kopya, en uzaktaki en soluk (önce uzak çizilir); slot sınırının
-// üstünden geçer. Taş kazma ve asıl tahta kazma üstte kalır.
-for (let k = 8; k >= 1; k--) sprite(wood, 5 + k * 2, 42, 0.72 * Math.pow(1 - k / 9, 1.1));
+// Kayma efekti (2 -> 1): bulanık hareket izi. 1px aralıklı 16 hayalet kopya, en uzaktaki
+// en soluk (önce uzak çizilir); sık kopyalar birbirine karışıp yumuşak bulanıklık verir.
+// Slot sınırının üstünden geçer. Taş kazma ve asıl tahta kazma üstte kalır.
+for (let k = 16; k >= 1; k--) sprite(wood, 5 + k, 42, 0.5 * Math.pow(1 - k / 17, 1.2));
 sprite(stone, 24, 42);
 sprite(wood, 5, 42);
 rect(7, 55, 19, 56, '#000000'); rect(7, 55, 14, 55, '#A5D62A');   // kullanılmış: dayanıklılık çubuğu

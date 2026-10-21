@@ -48,7 +48,8 @@ public final class BHSUpdateScreen extends Screen {
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        super.render(context, mouseX, mouseY, delta); // 1.20.2+: Screen.render arka planı çizer; içerik üstüne
+        renderBackground(context); // 1.20.1: arka planı ekran kendisi çizer (1.20.2+ Screen.render çizer)
+        super.render(context, mouseX, mouseY, delta);
         context.drawCenteredTextWithShadow(textRenderer, title, width / 2, 70, 0xFFFFFF);
         lines.drawCenterWithShadow(context, width / 2, 90);
     }

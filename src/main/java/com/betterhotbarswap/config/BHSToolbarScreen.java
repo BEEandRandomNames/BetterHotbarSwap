@@ -32,6 +32,12 @@ public final class BHSToolbarScreen extends Screen {
     private final List<Integer> shown = new ArrayList<>();
     private int left;
     private int top;
+    // Kaydırma (çok kayıt ya da büyük arayüz ölçeği): görünen ilk satır + görünür satır sayısı.
+    // Fare tekerleği veya sağdaki kaydırma çubuğu (sürüklenir/tıklanır) (F11).
+    private int scroll;
+    private int visible;
+    private boolean dragging;
+    private static final int BAR_W = 6;
 
     public BHSToolbarScreen(Screen parent) {
         super(Text.translatable("betterhotbarswap.toolbar.title"));
@@ -44,9 +50,11 @@ public final class BHSToolbarScreen extends Screen {
         for (int i = 0; i < 9; i++) if (!SurvivalToolbars.isEmpty(client, i)) shown.add(i);
         left = width / 2 - ROW_W / 2;
         top = 32;
-        for (int r = 0; r < shown.size(); r++) {
+        visible = Math.max(1, (height - 48 - top) / ROW_H);
+        scroll = Math.max(0, Math.min(scroll, maxScroll()));
+        for (int r = scroll; r < Math.min(shown.size(), scroll + visible); r++) {
             int idx = shown.get(r);
-            int y = top + r * ROW_H;
+            int y = rowY(r);
             int bx = left + 14 + HOTBAR_W + 4;
             addDrawableChild(ButtonWidget.builder(Text.translatable("betterhotbarswap.toolbar.load"),
                 b -> SurvivalToolbars.load(client, idx)).dimensions(bx, y + 1, BTN_W, 20).build());
@@ -81,9 +89,9 @@ public final class BHSToolbarScreen extends Screen {
         }
         boolean hoveredBar = false;
         PlayerInventory inv = client.player != null ? client.player.getInventory() : null;
-        for (int r = 0; r < shown.size(); r++) {
+        for (int r = scroll; r < Math.min(shown.size(), scroll + visible); r++) {
             int idx = shown.get(r);
-            int y = top + r * ROW_H;
+            int y = rowY(r);
             context.drawTextWithShadow(textRenderer, String.valueOf(idx + 1), left + 2, y + 7, 0xFFFFFF);
             int hx = left + 14;
             // Oyunun KENDİ hotbar görseli (oyundakiyle birebir, kaynak paketine uyar).
@@ -108,18 +116,27 @@ public final class BHSToolbarScreen extends Screen {
                 hoveredBar = true;
             }
         }
+        if (maxScroll() > 0) {
+            int h = visible * ROW_H;
+            int th = Math.max(16, h * visible / shown.size());
+            // 1.20.1: vanilla liste kaydırma çubuğu da fill ile çizilir (sprite yok).
+            int ty = top + (h - th) * scroll / maxScroll();
+            context.fill(barX(), top, barX() + BAR_W, top + h, 0xFF000000);
+            context.fill(barX(), ty, barX() + BAR_W, ty + th, 0xFF808080);
+            context.fill(barX(), ty, barX() + BAR_W - 1, ty + th - 1, 0xFFC0C0C0);
+        }
         Text hint = Text.translatable("betterhotbarswap.toolbar.hint",
             com.betterhotbarswap.client.BetterHotbarSwapClient.getToolbarSaveKey().getBoundKeyLocalizedText(),
             com.betterhotbarswap.client.BetterHotbarSwapClient.getToolbarLoadKey().getBoundKeyLocalizedText());
         context.drawCenteredTextWithShadow(textRenderer, hint, width / 2, height - 42, 0xA0A0A0);
         long since = System.currentTimeMillis() - savedAtMs;
         int savedRow = shown.indexOf(savedIndex);
-        if (since < SAVED_SHOW_MS && savedRow >= 0) {
+        if (since < SAVED_SHOW_MS && savedRow >= scroll && savedRow < scroll + visible) {
             // Son 500 ms'de solar (alfa 4'ün altında font hiç çizmez).
             int alpha = (int) (255 * Math.min(1.0, (SAVED_SHOW_MS - since) / 500.0));
             Text saved = Text.translatable("betterhotbarswap.toolbar.saved");
             int x = Math.max(2, left - 4 - textRenderer.getWidth(saved));
-            if (alpha > 4) context.drawTextWithShadow(textRenderer, saved, x, top + savedRow * ROW_H + 7, (alpha << 24) | 0x55FF55);
+            if (alpha > 4) context.drawTextWithShadow(textRenderer, saved, x, rowY(savedRow) + 7, (alpha << 24) | 0x55FF55);
         }
         super.render(context, mouseX, mouseY, delta);
         // Vanilla'nın "Düzenle" çevirisi: her dilde hazır.
@@ -135,14 +152,63 @@ public final class BHSToolbarScreen extends Screen {
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
         if (super.mouseClicked(mx, my, button)) return true;
-        for (int r = 0; r < shown.size(); r++) {
-            int y = top + r * ROW_H;
+        if (button == 0 && maxScroll() > 0 && mx >= barX() && mx < barX() + BAR_W && my >= top && my < top + visible * ROW_H) {
+            dragging = true;
+            scrollTo(my);
+            return true;
+        }
+        for (int r = scroll; r < Math.min(shown.size(), scroll + visible); r++) {
+            int y = rowY(r);
             if (button == 0 && mx >= left + 14 && mx < left + 14 + HOTBAR_W && my >= y && my < y + 22) {
                 client.setScreen(new BHSToolbarEditScreen(this, shown.get(r)));
                 return true;
             }
         }
         return false;
+    }
+
+    private int rowY(int r) {
+        return top + (r - scroll) * ROW_H;
+    }
+
+    private int maxScroll() {
+        return Math.max(0, shown.size() - visible);
+    }
+
+    private int barX() {
+        return left + ROW_W + 4;
+    }
+
+    private void setScroll(int s) {
+        s = Math.max(0, Math.min(s, maxScroll()));
+        if (s == scroll) return;
+        scroll = s;
+        clearAndInit();
+    }
+
+    // Çubukta tutulan yükseklik oranı = kaydırma oranı.
+    private void scrollTo(double my) {
+        setScroll((int) Math.round((my - top) / (visible * ROW_H) * maxScroll()));
+    }
+
+    @Override
+    public boolean mouseScrolled(double mx, double my, double amount) {
+        if (amount == 0 || maxScroll() == 0) return super.mouseScrolled(mx, my, amount);
+        setScroll(scroll - (int) Math.signum(amount));
+        return true;
+    }
+
+    @Override
+    public boolean mouseDragged(double mx, double my, int button, double dx, double dy) {
+        if (!dragging) return super.mouseDragged(mx, my, button, dx, dy);
+        scrollTo(my);
+        return true;
+    }
+
+    @Override
+    public boolean mouseReleased(double mx, double my, int button) {
+        dragging = false;
+        return super.mouseReleased(mx, my, button);
     }
 
     // Açan tuşa tekrar basınca kapanır (vanilla envanter tuşu gibi).

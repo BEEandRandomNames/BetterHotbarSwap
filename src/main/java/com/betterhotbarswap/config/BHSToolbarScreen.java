@@ -9,17 +9,15 @@ import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
 
 import java.util.ArrayList;
 import java.util.List;
 
-// Kayıtlı araç çubukları: SADECE dolu olanlar listelenir (vanilla hotbar
+// Kayıtlı araç çubukları: SADECE dolu olanlar listelenir (vanilla envanter stili
 // görünümü + [Yükle] [Sil]). [Ekle] şu anki hotbar'ı ilk boş yuvaya kaydeder.
 // Satır numarası = kayıt yuvası = dünyadaki "Yükle tuşu + o kısayol".
 // Survival'da envanterde OLMAYAN eşyalar kırmızı tonla gösterilir.
 public final class BHSToolbarScreen extends Screen {
-    private static final Identifier WIDGETS = new Identifier("textures/gui/widgets.png");
     private static final int HOTBAR_W = 182;
     private static final int ROW_H = 24;
     private static final int BTN_W = 50;
@@ -87,7 +85,11 @@ public final class BHSToolbarScreen extends Screen {
             int y = top + r * ROW_H;
             context.drawTextWithShadow(textRenderer, String.valueOf(idx + 1), left + 2, y + 7, 0xFFFFFF);
             int hx = left + 14;
-            context.drawTexture(WIDGETS, hx, y, 0, 0, HOTBAR_W, 22);
+            // Doku YOK (evrensel): 1.20.2'de widgets.png kalktı, doku yolları sürümle değişiyor.
+            // Düzenleyiciyle aynı vanilla envanter stili: çerçeveli gri şerit + 9 çökük slot.
+            context.fill(hx, y, hx + HOTBAR_W, y + 22, 0xFF000000);
+            context.fill(hx + 1, y + 1, hx + HOTBAR_W - 1, y + 21, 0xFFC6C6C6);
+            for (int s = 0; s < 9; s++) BHSToolbarEditScreen.slot(context, hx + 2 + s * 20, y + 2);
             boolean over = mouseX >= hx && mouseX < hx + HOTBAR_W && mouseY >= y && mouseY < y + 22;
             java.util.List<ItemStack> entry = SurvivalToolbars.storage(client).get(idx);
             for (int s = 0; s < 9; s++) {

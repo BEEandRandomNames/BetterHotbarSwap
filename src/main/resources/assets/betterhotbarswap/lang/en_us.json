@@ -23,7 +23,7 @@
   "betterhotbarswap.toolbar.delete": "Delete",
   "betterhotbarswap.toolbar.edit_title": "Toolbar %s — Edit",
   "betterhotbarswap.toolbar.edit_hint": "Click a toolbar to edit it",
-  "betterhotbarswap.toolbar.edit_help": "Drag and drop or click to move items; it only rearranges, nothing is duplicated. Red: not in your inventory right now.",
+  "betterhotbarswap.toolbar.edit_help": "Click an item to pick it up, click a slot to place it; it only rearranges, nothing is duplicated. Red: not in your inventory right now.",
   "betterhotbarswap.toolbar.add": "Add Toolbar",
   "betterhotbarswap.toolbar.add.desc": "Saves your current layout (hotbar, inventory and offhand) into the first free slot.",
   "betterhotbarswap.toolbar.full": "All 9 slots are used, delete one first.",

@@ -23,7 +23,7 @@
   "betterhotbarswap.toolbar.delete": "Löschen",
   "betterhotbarswap.toolbar.edit_title": "Werkzeugleiste %s — Bearbeiten",
   "betterhotbarswap.toolbar.edit_hint": "Klicke auf eine Leiste, um sie zu bearbeiten",
-  "betterhotbarswap.toolbar.edit_help": "Gegenstände ziehen und ablegen oder anklicken; es wird nur umsortiert, nichts verdoppelt. Rot: gerade nicht im Inventar.",
+  "betterhotbarswap.toolbar.edit_help": "Gegenstand anklicken zum Aufnehmen, Platz anklicken zum Ablegen; es wird nur umsortiert, nichts verdoppelt. Rot: gerade nicht im Inventar.",
   "betterhotbarswap.toolbar.add": "Leiste hinzufügen",
   "betterhotbarswap.toolbar.add.desc": "Speichert deine aktuelle Anordnung (Schnellleiste, Inventar, Zweithand) im ersten freien Platz.",
   "betterhotbarswap.toolbar.full": "Alle 9 Plätze belegt, lösche zuerst einen.",

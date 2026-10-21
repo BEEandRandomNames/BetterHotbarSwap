@@ -23,7 +23,7 @@
   "betterhotbarswap.toolbar.delete": "Excluir",
   "betterhotbarswap.toolbar.edit_title": "Barra de ferramentas %s — Editar",
   "betterhotbarswap.toolbar.edit_hint": "Clique numa barra para editá-la",
-  "betterhotbarswap.toolbar.edit_help": "Arraste e solte ou clique para mover; só reorganiza, nada é duplicado. Vermelho: não está no seu inventário agora.",
+  "betterhotbarswap.toolbar.edit_help": "Clique num item para pegá-lo e num espaço para colocá-lo; só reorganiza, nada é duplicado. Vermelho: não está no seu inventário agora.",
   "betterhotbarswap.toolbar.add": "Adicionar barra",
   "betterhotbarswap.toolbar.add.desc": "Salva seu layout atual (barra, inventário e mão secundária) no primeiro espaço livre.",
   "betterhotbarswap.toolbar.full": "Os 9 espaços estão ocupados, exclua um primeiro.",

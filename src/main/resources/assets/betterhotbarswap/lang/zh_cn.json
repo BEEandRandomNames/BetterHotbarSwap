@@ -23,7 +23,7 @@
   "betterhotbarswap.toolbar.delete": "删除",
   "betterhotbarswap.toolbar.edit_title": "工具栏 %s — 编辑",
   "betterhotbarswap.toolbar.edit_hint": "点击工具栏进行编辑",
-  "betterhotbarswap.toolbar.edit_help": "拖放或点击来移动物品；只是重新排列，不会复制任何物品。红色：当前物品栏中没有。",
+  "betterhotbarswap.toolbar.edit_help": "点击物品拿起，再点击格子放下；只是重新排列，不会复制任何物品。红色：当前物品栏中没有。",
   "betterhotbarswap.toolbar.add": "添加工具栏",
   "betterhotbarswap.toolbar.add.desc": "把当前布局（快捷栏、物品栏和副手）保存到第一个空位。",
   "betterhotbarswap.toolbar.full": "9 个位置都已占用，请先删除一个。",

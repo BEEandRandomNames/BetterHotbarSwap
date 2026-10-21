@@ -23,7 +23,7 @@
   "betterhotbarswap.toolbar.delete": "Удалить",
   "betterhotbarswap.toolbar.edit_title": "Панель инструментов %s — Правка",
   "betterhotbarswap.toolbar.edit_hint": "Нажмите на панель, чтобы изменить её",
-  "betterhotbarswap.toolbar.edit_help": "Перетаскивайте или щёлкайте, чтобы перемещать; только перестановка, ничего не дублируется. Красный: сейчас нет в инвентаре.",
+  "betterhotbarswap.toolbar.edit_help": "Щёлкните по предмету, чтобы взять его, и по ячейке, чтобы положить; только перестановка, ничего не дублируется. Красный: сейчас нет в инвентаре.",
   "betterhotbarswap.toolbar.add": "Добавить панель",
   "betterhotbarswap.toolbar.add.desc": "Сохраняет текущую раскладку (панель, инвентарь и вторая рука) в первую свободную ячейку.",
   "betterhotbarswap.toolbar.full": "Все 9 ячеек заняты, сначала удалите одну.",

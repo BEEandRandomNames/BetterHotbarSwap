@@ -404,7 +404,7 @@ public final class ShiftBulkQuickMove {
             lastStallMsgMs = now;
             if (client.player == null) return;
             client.player.sendMessage(
-                net.minecraft.text.Text.literal("Alım takıldı — imleci boşaltıp ekranı kapatıp açmayı dene.")
+                net.minecraft.text.Text.translatable("betterhotbarswap.msg.stalled")
                     .formatted(net.minecraft.util.Formatting.RED),
                 false);
         } catch (Exception ignored) {

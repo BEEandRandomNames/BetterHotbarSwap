@@ -83,15 +83,27 @@ public class CreativeInventoryScreenHotbarMixin {
         if (a.getItem() != b.getItem()) return false;
         return Objects.equals(a.getNbt(), b.getNbt());
     }
-    // Stack sırası: hotbar'da basılana yakınlık (basılan hariç), sonra main 9->35.
+    // Stack sırası: SADECE hotbar, basılana yakınlık (basılan hariç). Envanter
+    // ancak hotbar'da hiç yer yoksa denenir (kural 2026-10-21: hotbar'da kalır).
     private static List<Integer> stackOrder(int pressedIndex) {
         List<Integer> order = new ArrayList<>();
         for (int d = 1; d < 9; d++) {
             if (pressedIndex - d >= 0) order.add(pressedIndex - d);
             if (pressedIndex + d < 9) order.add(pressedIndex + d);
         }
-        for (int i = 9; i < 36; i++) order.add(i);
         return order;
+    }
+    // Kısmi aynı yığına ekle (mutlak tahmin + paket). Dönüş: taşınan miktar.
+    private static int mergeInto(MinecraftClient client, PlayerInventory inv, int idx, ItemStack old, int remaining, StringBuilder moves) {
+        ItemStack s = inv.getStack(idx);
+        if (!isSameStackable(s, old) || s.getCount() >= s.getMaxCount()) return 0;
+        int move = Math.min(remaining, s.getMaxCount() - s.getCount());
+        ItemStack updated = s.copy();
+        updated.setCount(s.getCount() + move);
+        inv.setStack(idx, updated);
+        client.interactionManager.clickCreativeStack(updated, survivalSlotId(idx));
+        moves.append(" +").append(move).append("->").append(idx < 9 ? "hb" + (idx + 1) : "m" + idx);
+        return move;
     }
     // Arama sekmesi mi? (Kabul edilen sınır: harfler orada yazıya aittir, bug #13.)
     private static boolean isSearchTab() {
@@ -118,9 +130,10 @@ public class CreativeInventoryScreenHotbarMixin {
         // Oyuncunun gerçek bağları (V/R gibi remap'ler dahil, bug #13).
         int hotbarIndex = HotbarInputController.hotbarIndex(client, keyCode, scanCode);
         if (hotbarIndex < 0 || hotbarIndex > 8) return;
-        // Basılı tutma tekrarı: yut (sessiz), makinalı-tüfek aksiyonu yok (bug #17).
+        // Basılı tutma tekrarı: Düzenli Toplama açıkken yut (#17); kapalıyken
+        // vanilla'ya bırak (vanilla gibi gidip gelme, kullanıcı kararı 2026-10-21).
         if (HotbarInputController.isRepeatPress(keyCode)) {
-            cir.setReturnValue(true);
+            if (com.betterhotbarswap.config.BHSConfig.tidyCollect) cir.setReturnValue(true);
             return;
         }
         CreativeInventoryScreen screen = (CreativeInventoryScreen)(Object)this;
@@ -188,7 +201,7 @@ public class CreativeInventoryScreenHotbarMixin {
         }
         BHSDebug.log("CTX " + handler.getClass().getSimpleName() + " sync=" + handler.syncId
             + " slots=" + handler.slots.size() + " current=" + (handler == client.player.currentScreenHandler));
-        BetterHotbarSwap.LOGGER.info("[BHS-INV] BEFORE {}", snapshot(playerInv));
+        if (com.betterhotbarswap.config.BHSConfig.debugEnabled) BetterHotbarSwap.LOGGER.info("[BHS-INV] BEFORE {}", snapshot(playerInv));
         ItemStack newStack = focusedSlot.getStack().copy();
         if (newStack.isEmpty()) return;
         // Creative liste stack'i 1'li görünür; hotbar'a tam deste ver.
@@ -197,7 +210,7 @@ public class CreativeInventoryScreenHotbarMixin {
         int hotbarSurvivalId = survivalSlotId(hotbarIndex);
         if (hotbarSurvivalId == -1) {
             BHSDebug.log("CREATIVE list->hotbar" + (hotbarIndex + 1) + " IPTAL bad-index " + BHSDebug.describeSlot(focusedSlot, client.player));
-            BetterHotbarSwap.LOGGER.info("[BHS-INV] AFTER {}", snapshot(playerInv));
+            if (com.betterhotbarswap.config.BHSConfig.debugEnabled) BetterHotbarSwap.LOGGER.info("[BHS-INV] AFTER {}", snapshot(playerInv));
             return;
         }
         String what = BHSDebug.describeSlot(focusedSlot, client.player);
@@ -212,24 +225,20 @@ public class CreativeInventoryScreenHotbarMixin {
             StringBuilder moves = new StringBuilder();
             for (int idx : stackOrder(hotbarIndex)) {
                 if (remaining <= 0) break;
-                ItemStack s = playerInv.getStack(idx);
-                if (!isSameStackable(s, oldHotbarStack)) continue;
-                int max = s.getMaxCount();
-                if (s.getCount() >= max) continue;
-                int move = Math.min(remaining, max - s.getCount());
-                ItemStack updated = s.copy();
-                updated.setCount(s.getCount() + move);
-                playerInv.setStack(idx, updated);
-                client.interactionManager.clickCreativeStack(updated, survivalSlotId(idx));
-                remaining -= move;
-                moves.append(" +").append(move).append("->").append(idx < 9 ? "hb" + (idx + 1) : "m" + idx);
+                remaining -= mergeInto(client, playerInv, idx, oldHotbarStack, remaining, moves);
             }
-            // 2. kalan: en yakın boş hotbar, yoksa main 9->35
+            // 2. kalan: en yakın boş hotbar; hotbar'da yer yoksa ancak şimdi
+            // envanter (önce kısmi aynı yığınlar 9->35, sonra ilk boş).
             String overflowWhere = null;
             if (remaining > 0) {
                 int overflowInvIndex = findNearestEmptyHotbar(playerInv, hotbarIndex);
-                if (overflowInvIndex == -1) overflowInvIndex = findFirstEmptyMain(playerInv);
-                if (overflowInvIndex != -1) {
+                if (overflowInvIndex == -1) {
+                    for (int idx = 9; idx < 36 && remaining > 0; idx++) {
+                        remaining -= mergeInto(client, playerInv, idx, oldHotbarStack, remaining, moves);
+                    }
+                    if (remaining > 0) overflowInvIndex = findFirstEmptyMain(playerInv);
+                }
+                if (overflowInvIndex != -1 && remaining > 0) {
                     ItemStack rest = oldHotbarStack.copy();
                     rest.setCount(remaining);
                     playerInv.setStack(overflowInvIndex, rest);
@@ -255,7 +264,7 @@ public class CreativeInventoryScreenHotbarMixin {
                 if (!dropped) {
                     BHSDebug.log("CREATIVE " + what + " -> hotbar" + (hotbarIndex + 1)
                         + " VAZGEÇİLDİ (drop başarısız, eski korundu)");
-                    BetterHotbarSwap.LOGGER.info("[BHS-INV] AFTER {}", snapshot(playerInv));
+                    if (com.betterhotbarswap.config.BHSConfig.debugEnabled) BetterHotbarSwap.LOGGER.info("[BHS-INV] AFTER {}", snapshot(playerInv));
                     HotbarInputController.markPressed(keyCode);
                     cir.setReturnValue(true);
                     return;
@@ -308,7 +317,7 @@ public class CreativeInventoryScreenHotbarMixin {
         cir.setReturnValue(true); cir.cancel();
         HotbarInputController.markPressed(keyCode);
         HotbarInputController.lastSwapNanos = System.nanoTime();
-        BetterHotbarSwap.LOGGER.info("[BHS-INV] AFTER {}", snapshot(playerInv));
+        if (com.betterhotbarswap.config.BHSConfig.debugEnabled) BetterHotbarSwap.LOGGER.info("[BHS-INV] AFTER {}", snapshot(playerInv));
     }
 
     @Inject(method = "charTyped", at = @At("HEAD"), cancellable = true)

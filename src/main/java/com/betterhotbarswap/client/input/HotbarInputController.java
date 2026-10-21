@@ -106,7 +106,7 @@ public final class HotbarInputController {
         String key = handler.getClass().getName() + "#" + handler.slots.size() + "#" + handler.syncId;
         if (layoutDumpKey.equals(key)) return;
         layoutDumpKey = key;
-        BetterHotbarSwap.LOGGER.info("[BHS-LAYOUT] handler={} slots={} sync={}",
+        if (com.betterhotbarswap.config.BHSConfig.debugEnabled) BetterHotbarSwap.LOGGER.info("[BHS-LAYOUT] handler={} slots={} sync={}",
             handler.getClass().getName(), handler.slots.size(), handler.syncId);
         for (Slot s : handler.slots) {
             String stack;
@@ -115,7 +115,7 @@ public final class HotbarInputController {
             } catch (Exception e) {
                 stack = "?";
             }
-            BetterHotbarSwap.LOGGER.info("[BHS-LAYOUT] id={} inv={} idx={} stack={}",
+            if (com.betterhotbarswap.config.BHSConfig.debugEnabled) BetterHotbarSwap.LOGGER.info("[BHS-LAYOUT] id={} inv={} idx={} stack={}",
                 s.id, s.inventory == null ? "null" : s.inventory.getClass().getName(), s.getIndex(), stack);
         }
     }
@@ -178,8 +178,49 @@ public final class HotbarInputController {
         }
         int hotbarIndex = hotbarIndex(MinecraftClient.getInstance(), keyCode, scanCode);
         if (hotbarIndex < 0 || hotbarIndex > 10) return false;
+        // Odaklı öğe (tarif kitabı araması, modların arama kutuları) ÖNCE:
+        // vanilla da tuşu önce odaklı öğeye verir (javap: HandledScreen.keyPressed
+        // ilk iş Screen.keyPressed). Yazı yazılıyorsa takas YOK.
+        try {
+            net.minecraft.client.gui.Element focused = screen.getFocused();
+            if (focused != null && focused.keyPressed(keyCode, scanCode, modifiers)) return true;
+        } catch (Exception ignored) {
+        }
         lastHotkey = keyCode;
         lastHotbar = hotbarIndex;
+        return handleHotkey(screen, keyCode, hotbarIndex, modifiers);
+    }
+
+    // Fareye bağlı kısayollar (Mouse4/5 vb.): vanilla bunları mouseClicked içinde
+    // onMouseClick(int) ile çözer. Aynı sisteme sokulur; fare tekrarı yoktur
+    // (her tık taze basış). Shift fiziksel latch'ten okunur.
+    public static boolean onMouseHotkey(HandledScreen<?> screen, int button) {
+        int hotbarIndex = mouseHotbarIndex(MinecraftClient.getInstance(), button);
+        if (hotbarIndex < 0) return false;
+        int code = MOUSE_CODE_BASE - button;
+        releasePressed(code);
+        return handleHotkey(screen, code, hotbarIndex, shiftLatch ? org.lwjgl.glfw.GLFW.GLFW_MOD_SHIFT : 0);
+    }
+
+    // Klavye kodlarıyla çakışmayan sahte kod (downKeys kaydı için).
+    private static final int MOUSE_CODE_BASE = -1000;
+
+    private static int mouseHotbarIndex(MinecraftClient client, int button) {
+        if (client == null || client.options == null) return -1;
+        try {
+            if (client.options.swapHandsKey.matchesMouse(button)) return 10;
+            KeyBinding hotbar10 = com.betterhotbarswap.client.BetterHotbarSwapClient.getHotbar10Key();
+            if (hotbar10 != null && hotbar10.matchesMouse(button)) return 9;
+            KeyBinding[] keys = client.options.hotbarKeys;
+            for (int i = 0; i < keys.length && i < 9; i++) {
+                if (keys[i] != null && keys[i].matchesMouse(button)) return i;
+            }
+        } catch (Exception ignored) {
+        }
+        return -1;
+    }
+
+    private static boolean handleHotkey(HandledScreen<?> screen, int keyCode, int hotbarIndex, int modifiers) {
         int prevSel = -1;
         try { prevSel = MinecraftClient.getInstance().player.getInventory().selectedSlot; } catch (Exception ignored) {}
         // Canlılık kaydı: basılı tuş HER olayda tazelenir (boş slotta gezerken
@@ -187,6 +228,10 @@ public final class HotbarInputController {
         // Taze/tekrar ayrımı için ÖNCE okunur.
         boolean repeat = isRepeatPress(keyCode);
         markPressed(keyCode);
+        // Tekrar yutma (#17) SADECE Düzenli Toplama açıkken (kullanıcı kararı
+        // 2026-10-21). Kapalıyken yutulan tekrarlar vanilla'ya gider: tuşu basılı
+        // tutunca eşya slot <-> hotbar arasında vanilla gibi gidip gelir.
+        boolean swallowRepeat = BHSConfig.tidyCollect;
         boolean shiftHeld = (modifiers & org.lwjgl.glfw.GLFW.GLFW_MOD_SHIFT) != 0;
         // Latch seeding: Shift GUI DIŞINDA basılı tutulup sonra hotkey'e
         // basılırsa press-olayı hiç gelmez; canlı modifiers bilgisinden öğren.
@@ -199,7 +244,7 @@ public final class HotbarInputController {
         if (focusedSlot == null || ((HandledScreenAccessor) screen).betterhotbarswap$isCursorDragging()
             || !handler.getCursorStack().isEmpty()) {
             // Tekrarlar sessiz yutulur (30Hz PASS spami yok); taze basış loglanır.
-            if (repeat) return true;
+            if (repeat) return swallowRepeat;
             String reason = focusedSlot == null ? "no-focused-slot"
                 : (((HandledScreenAccessor) screen).betterhotbarswap$isCursorDragging() ? "cursor-dragging" : "cursor-not-empty");
             BHSDebug.log("PASS key=" + keyCode + " screen=" + screen.getClass().getSimpleName()
@@ -214,7 +259,7 @@ public final class HotbarInputController {
         if (repeat) {
             boolean holdFlow = !(screen instanceof CreativeInventoryScreen)
                 && !(focusedSlot.inventory instanceof PlayerInventory);
-            if (!holdFlow) return true;
+            if (!holdFlow) return swallowRepeat;
         }
         boolean isFromCreativeList = !(focusedSlot.inventory instanceof PlayerInventory);
         if (screen instanceof CreativeInventoryScreen) {
@@ -287,7 +332,7 @@ public final class HotbarInputController {
             }
             // Oturumsuz + boş-slot tekrarları sessiz yutulur (biten hold'un
             // artçıları; taze basış yukarıda loglanır).
-            if (repeat && !focusedSlot.hasStack()) return true;
+            if (repeat && !focusedSlot.hasStack()) return swallowRepeat;
             // Shift + Kısayol burst: N craft simüle edilir, tüm paketler AYNI
             // tick'te gider (0.06-0.1sn algısı). Uygun değilse tek alım + drain.
             // İmleç doluysa sadece tek alım yapılır.

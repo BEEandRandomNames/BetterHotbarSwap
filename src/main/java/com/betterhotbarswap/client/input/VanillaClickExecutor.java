@@ -99,6 +99,81 @@ public class VanillaClickExecutor {
         }
         return best;
     }
+    // Yerinden çıkan eşya (kullanıcı kuralı, 2026-10-21): "oyuncu bunu hotbar'da
+    // tutuyorsa bir sebebi vardır" -> ENVANTERE GİTMEZ. Önce hotbar'daki aynı
+    // eşya yığınlarıyla birleşir (hedefe yakın olan önce), sığmayan kalan en
+    // yakın boş hotbar slotuna. Hotbar'da yer yoksa -1/-2 döner, çağıran eski
+    // davranışına düşer. Dönüş: -2 = sığmaz, -1 = boş slot gerekmez, >=0 = kullanılacak boş slot.
+    public static int planEvictWithinHotbar(PlayerInventory inv, int target) {
+        ItemStack old = inv.getStack(target);
+        if (old.isEmpty()) return -1;
+        int room = 0;
+        if (old.getMaxCount() > 1) {
+            for (int j = 0; j < 9; j++) {
+                if (j == target) continue;
+                ItemStack s = inv.getStack(j);
+                if (isSameStackable(s, old)) room += Math.max(0, s.getMaxCount() - s.getCount());
+            }
+        }
+        if (room >= old.getCount()) return -1;
+        int e = nearestEmptyHotbar(inv, target);
+        return e == -1 ? -2 : e;
+    }
+
+    // planEvictWithinHotbar'ı uygular: hedef BOŞALIR, eski eşya hotbar'da kalır.
+    // İmleç boş başlamalı; zincir sonunda imleç boştur (kapasite önceden hesaplı).
+    // idOf: inv index -> paket slot id'si (güvenilmez-id düzeninde 36+i).
+    public static boolean evictWithinHotbar(MinecraftClient client, ScreenHandler handler, PlayerInventory inv,
+                                            int target, java.util.function.IntUnaryOperator idOf) {
+        int plan = planEvictWithinHotbar(inv, target);
+        if (plan == -2) return false;
+        ItemStack old = inv.getStack(target).copy();
+        if (old.isEmpty()) return true;
+        int targetId = idOf.applyAsInt(target);
+        if (targetId < 0) return false;
+        java.util.List<Integer> merges = new java.util.ArrayList<>();
+        int left = old.getCount();
+        if (old.getMaxCount() > 1) {
+            for (int d = 1; d < 9 && left > 0; d++) {
+                for (int j : new int[]{target - d, target + d}) {
+                    if (j < 0 || j > 8 || left <= 0) continue;
+                    ItemStack s = inv.getStack(j);
+                    int r = isSameStackable(s, old) ? s.getMaxCount() - s.getCount() : 0;
+                    if (r <= 0 || idOf.applyAsInt(j) < 0) continue;
+                    merges.add(j);
+                    left -= Math.min(r, left);
+                }
+            }
+        }
+        if (left > 0 && (plan < 0 || idOf.applyAsInt(plan) < 0)) return false;
+        if (merges.isEmpty()) {
+            // Birleşme yok: tek SWAP (imleçsiz).
+            client.interactionManager.clickSlot(handler.syncId, targetId, plan, SlotActionType.SWAP, client.player);
+            inv.setStack(plan, old);
+        } else {
+            client.interactionManager.clickSlot(handler.syncId, targetId, 0, SlotActionType.PICKUP, client.player);
+            int carry = old.getCount();
+            for (int j : merges) {
+                ItemStack s = inv.getStack(j).copy();
+                int mv = Math.min(s.getMaxCount() - s.getCount(), carry);
+                client.interactionManager.clickSlot(handler.syncId, idOf.applyAsInt(j), 0, SlotActionType.PICKUP, client.player);
+                s.setCount(s.getCount() + mv);
+                inv.setStack(j, s);
+                carry -= mv;
+            }
+            if (carry > 0) {
+                client.interactionManager.clickSlot(handler.syncId, idOf.applyAsInt(plan), 0, SlotActionType.PICKUP, client.player);
+                ItemStack rest = old.copy();
+                rest.setCount(carry);
+                inv.setStack(plan, rest);
+            }
+        }
+        inv.setStack(target, ItemStack.EMPTY);
+        BHSDebug.log("EVICT hb" + (target + 1) + " x" + old.getCount() + " -> "
+            + (merges.isEmpty() ? "" : "stack" + merges) + (left > 0 || merges.isEmpty() ? " bos hb" + (plan + 1) : ""));
+        return true;
+    }
+
     // Evict tasması: hotbar doluysa main 9->35 ilk boş (drain ile parite).
     private static int firstEmptyMain(PlayerInventory inv) {
         for (int i = 9; i < 36; i++) if (inv.getStack(i).isEmpty()) return i;
@@ -283,7 +358,7 @@ public class VanillaClickExecutor {
         }
         Slot target = handler.getSlot(focusedSlotId);
         int exclude = (target.inventory == playerInv) ? target.getIndex() : -1;
-        BetterHotbarSwap.LOGGER.info("[BHS-INV] BEFORE {}", snapshot(playerInv));
+        if (com.betterhotbarswap.config.BHSConfig.debugEnabled) BetterHotbarSwap.LOGGER.info("[BHS-INV] BEFORE {}", snapshot(playerInv));
         // Aynı item: MERGE whole-fit / MERGE_FILL kısmi / OVERFLOW dolu.
         if (!oldOff.isEmpty() && focusedStack.getMaxCount() > 1 && isSameStackable(focusedStack, oldOff)) {
             int space = oldOff.getMaxCount() - oldOff.getCount();
@@ -298,7 +373,7 @@ public class VanillaClickExecutor {
                     client.interactionManager.clickSlot(handler.syncId, offRealId, 0, SlotActionType.PICKUP, client.player);
                     playerInv.setStack(40, merged);
                     if (target.inventory == playerInv) playerInv.setStack(target.getIndex(), ItemStack.EMPTY);
-                    BetterHotbarSwap.LOGGER.info("[BHS-INV] AFTER {}", snapshot(playerInv));
+                    if (com.betterhotbarswap.config.BHSConfig.debugEnabled) BetterHotbarSwap.LOGGER.info("[BHS-INV] AFTER {}", snapshot(playerInv));
                     return true;
                 }
                 int dest = prio ? findOffhandDest(playerInv, focusedStack, remainder, exclude)
@@ -320,7 +395,7 @@ public class VanillaClickExecutor {
                     if (target.inventory == playerInv && target.getIndex() != dest) {
                         playerInv.setStack(target.getIndex(), ItemStack.EMPTY);
                     }
-                    BetterHotbarSwap.LOGGER.info("[BHS-INV] AFTER {}", snapshot(playerInv));
+                    if (com.betterhotbarswap.config.BHSConfig.debugEnabled) BetterHotbarSwap.LOGGER.info("[BHS-INV] AFTER {}", snapshot(playerInv));
                     return true;
                 }
             }
@@ -340,7 +415,7 @@ public class VanillaClickExecutor {
                     if (target.inventory == playerInv && target.getIndex() != dest) {
                         playerInv.setStack(target.getIndex(), ItemStack.EMPTY);
                     }
-                    BetterHotbarSwap.LOGGER.info("[BHS-INV] AFTER {}", snapshot(playerInv));
+                    if (com.betterhotbarswap.config.BHSConfig.debugEnabled) BetterHotbarSwap.LOGGER.info("[BHS-INV] AFTER {}", snapshot(playerInv));
                     return true;
                 }
             }
@@ -355,7 +430,7 @@ public class VanillaClickExecutor {
                         + ", sonra slot " + focusedSlotId + " -> off");
                     client.interactionManager.clickSlot(handler.syncId, offRealId, emptyHb, SlotActionType.SWAP, client.player);
                     client.interactionManager.clickSlot(handler.syncId, focusedSlotId, 40, SlotActionType.SWAP, client.player);
-                    BetterHotbarSwap.LOGGER.info("[BHS-INV] AFTER {}", snapshot(playerInv));
+                    if (com.betterhotbarswap.config.BHSConfig.debugEnabled) BetterHotbarSwap.LOGGER.info("[BHS-INV] AFTER {}", snapshot(playerInv));
                     return true;
                 }
             }
@@ -366,7 +441,7 @@ public class VanillaClickExecutor {
                     + ", sonra slot " + focusedSlotId + " -> off");
                 client.interactionManager.clickSlot(handler.syncId, mainReal, 40, SlotActionType.SWAP, client.player);
                 client.interactionManager.clickSlot(handler.syncId, focusedSlotId, 40, SlotActionType.SWAP, client.player);
-                BetterHotbarSwap.LOGGER.info("[BHS-INV] AFTER {}", snapshot(playerInv));
+                if (com.betterhotbarswap.config.BHSConfig.debugEnabled) BetterHotbarSwap.LOGGER.info("[BHS-INV] AFTER {}", snapshot(playerInv));
                 return true;
             }
         }
@@ -378,7 +453,7 @@ public class VanillaClickExecutor {
         }
         BHSDebug.log("OFFHAND SWAP sync=" + handler.syncId + " slot=" + focusedSlotId + " -> off");
         client.interactionManager.clickSlot(handler.syncId, focusedSlotId, 40, SlotActionType.SWAP, client.player);
-        BetterHotbarSwap.LOGGER.info("[BHS-INV] AFTER {}", snapshot(playerInv));
+        if (com.betterhotbarswap.config.BHSConfig.debugEnabled) BetterHotbarSwap.LOGGER.info("[BHS-INV] AFTER {}", snapshot(playerInv));
         return true;
     }
 
@@ -391,11 +466,11 @@ public class VanillaClickExecutor {
         if (client == null || client.player == null || client.interactionManager == null) return false;
         PlayerInventory playerInv = client.player.getInventory();
         if (focusedSlot.getStack().isEmpty()) return false;
-        BetterHotbarSwap.LOGGER.info("[BHS-INV] BEFORE {}", snapshot(playerInv));
+        if (com.betterhotbarswap.config.BHSConfig.debugEnabled) BetterHotbarSwap.LOGGER.info("[BHS-INV] BEFORE {}", snapshot(playerInv));
         if (oldOff.isEmpty() || fromPlayer) {
             BHSDebug.log("OFFHAND SWAP sync=" + handler.syncId + " slot=" + focusedSlotId + " -> off (slotsuz)");
             client.interactionManager.clickSlot(handler.syncId, focusedSlotId, 40, SlotActionType.SWAP, client.player);
-            BetterHotbarSwap.LOGGER.info("[BHS-INV] AFTER {}", snapshot(playerInv));
+            if (com.betterhotbarswap.config.BHSConfig.debugEnabled) BetterHotbarSwap.LOGGER.info("[BHS-INV] AFTER {}", snapshot(playerInv));
             return true;
         }
         if (!prio) {
@@ -411,7 +486,7 @@ public class VanillaClickExecutor {
                 + " -> hb" + (emptyHb + 1) + " -> off");
             client.interactionManager.clickSlot(handler.syncId, focusedSlotId, emptyHb, SlotActionType.SWAP, client.player);
             client.interactionManager.clickSlot(handler.syncId, hbReal, 40, SlotActionType.SWAP, client.player);
-            BetterHotbarSwap.LOGGER.info("[BHS-INV] AFTER {}", snapshot(playerInv));
+            if (com.betterhotbarswap.config.BHSConfig.debugEnabled) BetterHotbarSwap.LOGGER.info("[BHS-INV] AFTER {}", snapshot(playerInv));
             return true;
         }
         int mainEmpty = firstEmptyMain(playerInv);
@@ -427,7 +502,7 @@ public class VanillaClickExecutor {
         client.interactionManager.clickSlot(handler.syncId, mainReal, x, SlotActionType.SWAP, client.player);
         client.interactionManager.clickSlot(handler.syncId, focusedSlotId, x, SlotActionType.SWAP, client.player);
         client.interactionManager.clickSlot(handler.syncId, xReal, 40, SlotActionType.SWAP, client.player);
-        BetterHotbarSwap.LOGGER.info("[BHS-INV] AFTER {}", snapshot(playerInv));
+        if (com.betterhotbarswap.config.BHSConfig.debugEnabled) BetterHotbarSwap.LOGGER.info("[BHS-INV] AFTER {}", snapshot(playerInv));
         return true;
     }
 
@@ -443,6 +518,12 @@ public class VanillaClickExecutor {
         if (client == null || client.player == null || client.interactionManager == null) return false;
         if (isFromCreativeList) return false;
         if (focusedSlot == null) return false;
+        // Modlu depo büyük yığını (count > item max): PICKUP/SWAP zincirleri
+        // max varsayar, fazlası imleçte kalırdı -> vanilla yapsın.
+        if (focusedSlot.getStack().getCount() > focusedSlot.getStack().getMaxCount()) {
+            BHSDebug.log("VANILLA buyuk-yigin x" + focusedSlot.getStack().getCount());
+            return false;
+        }
         PlayerInventory playerInv = client.player.getInventory();
         // Bug #31: zirh (36-39) / offhand (40) kaynagi vanilla'ya birak (dupe vektoru).
         try {
@@ -508,7 +589,7 @@ public class VanillaClickExecutor {
             }
             int hotbarPos = 36 + hotbarIndex;
             int focusedTrue = wrapperPosToTrueIdx(focusedPos);
-            BetterHotbarSwap.LOGGER.info("[BHS-INV] BEFORE {}", snapshot(playerInv));
+            if (com.betterhotbarswap.config.BHSConfig.debugEnabled) BetterHotbarSwap.LOGGER.info("[BHS-INV] BEFORE {}", snapshot(playerInv));
             // Aynı item: önce BİRLEŞTİR (F3). Tamamı sığıyorsa 2 PICKUP ile tek
             // yığın; kısmen sığıyorsa hedef max'a tamamlanır + kalan dağıtılır
             // (60+6 -> 64 + kalan 2). Kalan için yer yoksa eski zincire düşer
@@ -529,7 +610,7 @@ public class VanillaClickExecutor {
                         client.interactionManager.clickSlot(handler.syncId, hotbarPos, 0, SlotActionType.PICKUP, client.player);
                         playerInv.setStack(hotbarIndex, merged);
                         if (focusedTrue != -1) playerInv.setStack(focusedTrue, ItemStack.EMPTY);
-                        BetterHotbarSwap.LOGGER.info("[BHS-INV] AFTER {}", snapshot(playerInv));
+                        if (com.betterhotbarswap.config.BHSConfig.debugEnabled) BetterHotbarSwap.LOGGER.info("[BHS-INV] AFTER {}", snapshot(playerInv));
                         return true;
                     }
                     int destInv = findRemainderDest(playerInv, focusedStack, remainder, hotbarIndex, focusedTrue);
@@ -549,7 +630,7 @@ public class VanillaClickExecutor {
                         playerInv.setStack(hotbarIndex, filledTarget);
                         playerInv.setStack(destInv, destNew);
                         if (focusedTrue != -1 && focusedTrue != destInv) playerInv.setStack(focusedTrue, ItemStack.EMPTY);
-                        BetterHotbarSwap.LOGGER.info("[BHS-INV] AFTER {}", snapshot(playerInv));
+                        if (com.betterhotbarswap.config.BHSConfig.debugEnabled) BetterHotbarSwap.LOGGER.info("[BHS-INV] AFTER {}", snapshot(playerInv));
                         return true;
                     }
                 }
@@ -578,22 +659,20 @@ public class VanillaClickExecutor {
                     client.interactionManager.clickSlot(handler.syncId, destPos, 0, SlotActionType.PICKUP, client.player);
                     playerInv.setStack(destInv, destNew);
                     if (focusedTrue != -1 && focusedTrue != destInv) playerInv.setStack(focusedTrue, ItemStack.EMPTY);
-                    BetterHotbarSwap.LOGGER.info("[BHS-INV] AFTER {}", snapshot(playerInv));
+                    if (com.betterhotbarswap.config.BHSConfig.debugEnabled) BetterHotbarSwap.LOGGER.info("[BHS-INV] AFTER {}", snapshot(playerInv));
                     return true;
                 }
             }
             if (prio && focusedPos != hotbarPos && !focusedIsHotbar && !oldHotbarStack.isEmpty()) {
-                int emptyHb = nearestEmptyHotbar(playerInv, hotbarIndex);
-                if (emptyHb != -1) {
+                // Eski: hotbar'daki aynı yığına / en yakın boş hotbar'a (envantere değil).
+                if (evictWithinHotbar(client, handler, playerInv, hotbarIndex, i -> 36 + i)) {
                     BHSDebug.log("PRIORITY sync=" + handler.syncId + " eski hb" + (hotbarIndex + 1)
-                        + " -> hb" + (emptyHb + 1) + ", sonra pos " + focusedPos + " -> hb" + (hotbarIndex + 1));
-                    client.interactionManager.clickSlot(handler.syncId, hotbarPos, emptyHb, SlotActionType.SWAP, client.player);
+                        + " hotbar'da kaldi, sonra pos " + focusedPos + " -> hb" + (hotbarIndex + 1));
                     client.interactionManager.clickSlot(handler.syncId, focusedPos, hotbarIndex, SlotActionType.SWAP, client.player);
                     // Tahmin: sonraki basış senkronu beklemeden tutarlı okusun (bug #15).
-                    playerInv.setStack(emptyHb, oldHotbarStack);
                     playerInv.setStack(hotbarIndex, focusedStack);
                     if (focusedTrue != -1) playerInv.setStack(focusedTrue, ItemStack.EMPTY);
-                    BetterHotbarSwap.LOGGER.info("[BHS-INV] AFTER {}", snapshot(playerInv));
+                    if (com.betterhotbarswap.config.BHSConfig.debugEnabled) BetterHotbarSwap.LOGGER.info("[BHS-INV] AFTER {}", snapshot(playerInv));
                     return true;
                 }
             }
@@ -601,7 +680,7 @@ public class VanillaClickExecutor {
             client.interactionManager.clickSlot(handler.syncId, focusedPos, hotbarIndex, SlotActionType.SWAP, client.player);
             playerInv.setStack(hotbarIndex, focusedStack);
             if (focusedTrue != -1) playerInv.setStack(focusedTrue, oldHotbarStack);
-            BetterHotbarSwap.LOGGER.info("[BHS-INV] AFTER {}", snapshot(playerInv));
+            if (com.betterhotbarswap.config.BHSConfig.debugEnabled) BetterHotbarSwap.LOGGER.info("[BHS-INV] AFTER {}", snapshot(playerInv));
             return true;
         }
 
@@ -625,14 +704,14 @@ public class VanillaClickExecutor {
                         merged.setCount(oldHotbarStack.getCount() + focusedStack.getCount());
                         BHSDebug.log((shiftBulk ? "SHIFT_BULK " : "") + "MERGE sync=" + handler.syncId + " slot " + focusedSlotId + " + hb" + (hotbarIndex + 1)
                             + " -> hb" + (hotbarIndex + 1) + " x" + merged.getCount());
-                        BetterHotbarSwap.LOGGER.info("[BHS-INV] BEFORE {}", snapshot(playerInv));
+                        if (com.betterhotbarswap.config.BHSConfig.debugEnabled) BetterHotbarSwap.LOGGER.info("[BHS-INV] BEFORE {}", snapshot(playerInv));
                         client.interactionManager.clickSlot(handler.syncId, focusedSlotId, 0, SlotActionType.PICKUP, client.player);
                         client.interactionManager.clickSlot(handler.syncId, hotbarRealSlotId, 0, SlotActionType.PICKUP, client.player);
                         playerInv.setStack(hotbarIndex, merged);
                         if (target.inventory == playerInv) {
                             playerInv.setStack(target.getIndex(), ItemStack.EMPTY);
                         }
-                        BetterHotbarSwap.LOGGER.info("[BHS-INV] AFTER {}", snapshot(playerInv));
+                        if (com.betterhotbarswap.config.BHSConfig.debugEnabled) BetterHotbarSwap.LOGGER.info("[BHS-INV] AFTER {}", snapshot(playerInv));
                         return true;
                     }
                     int focusedExclude = (target.inventory == playerInv) ? target.getIndex() : -1;
@@ -650,7 +729,7 @@ public class VanillaClickExecutor {
                             BHSDebug.log((shiftBulk ? "SHIFT_BULK " : "") + "MERGE_FILL sync=" + handler.syncId + " slot " + focusedSlotId
                                 + " -> hb" + (hotbarIndex + 1) + " x" + filledTarget.getCount()
                                 + " + kalan x" + remainder + " -> " + (destInv < 9 ? "hb" + (destInv + 1) : "m" + destInv));
-                            BetterHotbarSwap.LOGGER.info("[BHS-INV] BEFORE {}", snapshot(playerInv));
+                            if (com.betterhotbarswap.config.BHSConfig.debugEnabled) BetterHotbarSwap.LOGGER.info("[BHS-INV] BEFORE {}", snapshot(playerInv));
                             client.interactionManager.clickSlot(handler.syncId, focusedSlotId, 0, SlotActionType.PICKUP, client.player);
                             client.interactionManager.clickSlot(handler.syncId, hotbarRealSlotId, 0, SlotActionType.PICKUP, client.player);
                             client.interactionManager.clickSlot(handler.syncId, destRealId, 0, SlotActionType.PICKUP, client.player);
@@ -659,7 +738,7 @@ public class VanillaClickExecutor {
                             if (target.inventory == playerInv && target.getIndex() != destInv) {
                                 playerInv.setStack(target.getIndex(), ItemStack.EMPTY);
                             }
-                            BetterHotbarSwap.LOGGER.info("[BHS-INV] AFTER {}", snapshot(playerInv));
+                            if (com.betterhotbarswap.config.BHSConfig.debugEnabled) BetterHotbarSwap.LOGGER.info("[BHS-INV] AFTER {}", snapshot(playerInv));
                             return true;
                         }
                     }
@@ -697,29 +776,25 @@ public class VanillaClickExecutor {
                         BHSDebug.log((shiftBulk ? "SHIFT_BULK " : "") + "OVERFLOW sync=" + handler.syncId + " slot " + focusedSlotId
                             + " +" + focusedStack.getCount() + " -> " + (destInv < 9 ? "hb" + (destInv + 1) : "m" + destInv)
                             + " (hb" + (hotbarIndex + 1) + " x" + oldHotbarStack.getMaxCount() + " korundu)");
-                        BetterHotbarSwap.LOGGER.info("[BHS-INV] BEFORE {}", snapshot(playerInv));
+                        if (com.betterhotbarswap.config.BHSConfig.debugEnabled) BetterHotbarSwap.LOGGER.info("[BHS-INV] BEFORE {}", snapshot(playerInv));
                         client.interactionManager.clickSlot(handler.syncId, focusedSlotId, 0, SlotActionType.PICKUP, client.player);
                         client.interactionManager.clickSlot(handler.syncId, destRealId, 0, SlotActionType.PICKUP, client.player);
                         playerInv.setStack(destInv, destNew);
                         if (target.inventory == playerInv && target.getIndex() != destInv) {
                             playerInv.setStack(target.getIndex(), ItemStack.EMPTY);
                         }
-                        BetterHotbarSwap.LOGGER.info("[BHS-INV] AFTER {}", snapshot(playerInv));
+                        if (com.betterhotbarswap.config.BHSConfig.debugEnabled) BetterHotbarSwap.LOGGER.info("[BHS-INV] AFTER {}", snapshot(playerInv));
                         return true;
                     }
                 }
             }
             if (prio && focusedSlotId != hotbarRealSlotId && !focusedIsHotbar && !playerInv.getStack(hotbarIndex).isEmpty()) {
-                int emptyHb = nearestEmptyHotbar(playerInv, hotbarIndex);
-                if (emptyHb != -1) {
-                    int emptyRealId = getRealSlotId(handler, playerInv, emptyHb);
-                    if (emptyRealId != -1) {
-                        BHSDebug.log("PRIORITY sync=" + handler.syncId + " eski hb" + (hotbarIndex + 1)
-                            + " -> hb" + (emptyHb + 1) + ", sonra slot " + focusedSlotId + " -> hb" + (hotbarIndex + 1));
-                        client.interactionManager.clickSlot(handler.syncId, hotbarRealSlotId, emptyHb, SlotActionType.SWAP, client.player);
-                        client.interactionManager.clickSlot(handler.syncId, focusedSlotId, hotbarIndex, SlotActionType.SWAP, client.player);
-                        return true;
-                    }
+                // Eski: hotbar'daki aynı yığına / en yakın boş hotbar'a (envantere değil).
+                if (evictWithinHotbar(client, handler, playerInv, hotbarIndex, i -> getRealSlotId(handler, playerInv, i))) {
+                    BHSDebug.log("PRIORITY sync=" + handler.syncId + " eski hb" + (hotbarIndex + 1)
+                        + " hotbar'da kaldi, sonra slot " + focusedSlotId + " -> hb" + (hotbarIndex + 1));
+                    client.interactionManager.clickSlot(handler.syncId, focusedSlotId, hotbarIndex, SlotActionType.SWAP, client.player);
+                    return true;
                 }
                 // Main-evict SADECE container/output: oyuncu-ici hamlede hotbar
                 // doluysa vanilla takas olur (F4-194; #27 daraltmasi, #29).

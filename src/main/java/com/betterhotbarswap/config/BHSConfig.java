@@ -19,8 +19,9 @@ public final class BHSConfig {
 
     public static boolean hotbarPriority = true;
     public static boolean shiftHotbarPickup = true;
-    public static boolean debugEnabled = true;
+    public static boolean debugEnabled = false;
     public static boolean tidyCollect = true;
+    public static boolean survivalToolbars = true;
 
     private BHSConfig() {
     }
@@ -31,8 +32,9 @@ public final class BHSConfig {
                 JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();
                 hotbarPriority = getBoolean(json, "hotbarPriority", true);
                 shiftHotbarPickup = getBoolean(json, "shiftHotbarPickup", true);
-                debugEnabled = getBoolean(json, "debugEnabled", true);
+                debugEnabled = getBoolean(json, "debugEnabled", false);
                 tidyCollect = getBoolean(json, "tidyCollect", true);
+                survivalToolbars = getBoolean(json, "survivalToolbars", true);
             } catch (Exception exception) {
                 BetterHotbarSwap.LOGGER.warn("Failed to load config, using defaults.", exception);
             }
@@ -46,6 +48,7 @@ public final class BHSConfig {
         json.addProperty("shiftHotbarPickup", shiftHotbarPickup);
         json.addProperty("debugEnabled", debugEnabled);
         json.addProperty("tidyCollect", tidyCollect);
+        json.addProperty("survivalToolbars", survivalToolbars);
 
         try {
             Files.createDirectories(CONFIG_PATH.getParent());

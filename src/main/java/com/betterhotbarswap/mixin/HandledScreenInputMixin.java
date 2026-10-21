@@ -18,4 +18,14 @@ public abstract class HandledScreenInputMixin {
             cir.setReturnValue(true);
         }
     }
+
+    // Fareye bağlı kısayollar (Mouse4/5): sol/sağ tık asla kısayol sayılmaz.
+    @Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true)
+    private void betterhotbarswap$mouseClicked(double mouseX, double mouseY, int button, CallbackInfoReturnable<Boolean> cir) {
+        if (button <= 1) return;
+        if ((Object) this instanceof net.minecraft.client.gui.screen.ingame.CreativeInventoryScreen) return;
+        if (HotbarInputController.onMouseHotkey((HandledScreen<?>) (Object) this, button)) {
+            cir.setReturnValue(true);
+        }
+    }
 }

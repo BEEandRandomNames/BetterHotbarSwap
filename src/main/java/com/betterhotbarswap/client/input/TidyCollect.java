@@ -83,6 +83,9 @@ public final class TidyCollect {
             PlayerInventory inv = client.player.getInventory();
             if (slot.inventory == inv) return false;
             if (!slot.hasStack() || !slot.canTakeItems(client.player)) return false;
+            // Modlu depo büyük yığını (ör. 256'lık sırt çantası): PICKUP zinciri
+            // max'tan fazlasını imleçte bırakırdı -> vanilla'ya bırak.
+            if (slot.getStack().getCount() > slot.getStack().getMaxCount()) return false;
             if (SlotClassifier.isProbableOutputSlot(slot, client.player, false)) return false;
             if (!h.getCursorStack().isEmpty()) return false;
             if (!isPureStorage(h, inv)) return false;
@@ -215,37 +218,42 @@ public final class TidyCollect {
         }
         ItemStack chestStack = stack;
         int srcId = src.id;
+        // 0) İlk alım İLK sıraya zorlanır: N dolu-farklıysa eski eşya ÖNCE (imleç
+        // boşken) çekilir. Kural: hotbar'daki aynı yığına / en yakın boş hotbar'a
+        // (envantere değil); hotbar'da yer yoksa eski yol (sıradaki ilk boş).
+        int first = order.get(0);
+        ItemStack cur = inv.getStack(first).copy();
+        if (forceAnchor && !cur.isEmpty() && !isSame(cur, chestStack)) {
+            ScreenHandler h = handlerOf(inv);
+            boolean kept = first < 9 && VanillaClickExecutor.evictWithinHotbar(client, h, inv, first,
+                i -> VanillaClickExecutor.realSlotId(h, inv, i));
+            if (!kept) {
+                int ev = firstEmptyInOrder(inv, order, 1);
+                int nReal = VanillaClickExecutor.realSlotId(h, inv, first);
+                int evReal = ev == -1 ? -1 : VanillaClickExecutor.realSlotId(h, inv, ev);
+                if (ev == -1 || nReal == -1 || evReal == -1) {
+                    BHSDebug.log("TIDY yer-yok (evict)");
+                    return false;
+                }
+                // SWAP kuralı: tıklanan slot <-> hotbar[düğme] (düğme 0-8).
+                // Main-anchor (9) SWAP'lanamaz: PICKUP çiftiyle taşınır.
+                if (first < 9 && ev < 9) {
+                    client.interactionManager.clickSlot(h.syncId, nReal, ev, SlotActionType.SWAP, client.player);
+                } else if (first < 9) {
+                    client.interactionManager.clickSlot(h.syncId, evReal, first, SlotActionType.SWAP, client.player);
+                } else {
+                    client.interactionManager.clickSlot(h.syncId, nReal, 0, SlotActionType.PICKUP, client.player);
+                    client.interactionManager.clickSlot(h.syncId, evReal, 0, SlotActionType.PICKUP, client.player);
+                }
+                inv.setStack(ev, cur);
+                inv.setStack(first, ItemStack.EMPTY);
+            }
+        }
         // 1) Kaynaktan al (imleç = tamamı).
         client.interactionManager.clickSlot(handlerOf(inv).syncId, srcId, 0, SlotActionType.PICKUP, client.player);
         int remaining = chestStack.getCount();
         for (int oi = 0; oi < order.size() && remaining > 0; oi++) {
             int destIdx = order.get(oi);
-            // İlk alım İLK sıraya zorlanır (N dolu-farklıysa evict).
-            if (forceAnchor && oi == 0) {
-                ItemStack cur = inv.getStack(destIdx).copy();
-                if (!cur.isEmpty() && !isSame(cur, chestStack)) {
-                    int ev = firstEmptyInOrder(inv, order, 1);
-                    int nReal = VanillaClickExecutor.realSlotId(handlerOf(inv), inv, destIdx);
-                    int evReal = ev == -1 ? -1 : VanillaClickExecutor.realSlotId(handlerOf(inv), inv, ev);
-                    if (ev == -1 || nReal == -1 || evReal == -1) {
-                        client.interactionManager.clickSlot(handlerOf(inv).syncId, srcId, 0, SlotActionType.PICKUP, client.player);
-                        BHSDebug.log("TIDY yer-yok (evict)");
-                        return false;
-                    }
-                    // SWAP kuralı: tıklanan slot <-> hotbar[düğme] (düğme 0-8).
-                    // Main-anchor (9) SWAP'lanamaz: PICKUP çiftiyle taşınır.
-                    if (destIdx < 9 && ev < 9) {
-                        client.interactionManager.clickSlot(handlerOf(inv).syncId, nReal, ev, SlotActionType.SWAP, client.player);
-                    } else if (destIdx < 9) {
-                        client.interactionManager.clickSlot(handlerOf(inv).syncId, evReal, destIdx, SlotActionType.SWAP, client.player);
-                    } else {
-                        client.interactionManager.clickSlot(handlerOf(inv).syncId, nReal, 0, SlotActionType.PICKUP, client.player);
-                        client.interactionManager.clickSlot(handlerOf(inv).syncId, evReal, 0, SlotActionType.PICKUP, client.player);
-                    }
-                    inv.setStack(ev, cur);
-                    inv.setStack(destIdx, ItemStack.EMPTY);
-                }
-            }
             ItemStack d = inv.getStack(destIdx).copy();
             if (!d.isEmpty() && !isSame(d, chestStack)) continue;
             int destReal = VanillaClickExecutor.realSlotId(handlerOf(inv), inv, destIdx);
@@ -287,23 +295,31 @@ public final class TidyCollect {
             int evIdx = -1;
             // Sıranın ilk elemanı (anchor=9 "0" modunda ilk eleman m35'tir, anchor değil).
             int first = order.get(0);
+            boolean freed = false;
             if (forceAnchor) {
                 ItemStack cur = inv.getStack(first);
                 if (!cur.isEmpty() && !isSame(cur, stack)) {
-                    for (int oi = 1; oi < order.size(); oi++) {
-                        if (inv.getStack(order.get(oi)).isEmpty()) {
-                            evIdx = order.get(oi);
-                            break;
+                    // takeStackIntoOrder ile AYNI plan: önce hotbar içi, olmazsa sıradaki ilk boş.
+                    int plan = first < 9 ? VanillaClickExecutor.planEvictWithinHotbar(inv, first) : -2;
+                    if (plan >= -1) {
+                        evIdx = plan;
+                    } else {
+                        for (int oi = 1; oi < order.size(); oi++) {
+                            if (inv.getStack(order.get(oi)).isEmpty()) {
+                                evIdx = order.get(oi);
+                                break;
+                            }
                         }
+                        if (evIdx == -1) return false;
                     }
-                    if (evIdx == -1) return false;
+                    freed = true;
                 }
             }
             int cap = 0;
             for (int oi = 0; oi < order.size(); oi++) {
                 int idx = order.get(oi);
                 if (idx == evIdx) continue;
-                ItemStack d = (idx == first && evIdx != -1) ? ItemStack.EMPTY : inv.getStack(idx);
+                ItemStack d = (idx == first && freed) ? ItemStack.EMPTY : inv.getStack(idx);
                 if (d.isEmpty()) cap += stack.getMaxCount();
                 else if (isSame(d, stack)) cap += Math.max(0, d.getMaxCount() - d.getCount());
                 if (cap >= need) return true;
@@ -339,7 +355,7 @@ public final class TidyCollect {
             lastFullMsgMs = now;
             if (client.player == null) return;
             client.player.sendMessage(
-                net.minecraft.text.Text.literal("Yer yok — envanterde boş yer aç.")
+                net.minecraft.text.Text.translatable("betterhotbarswap.msg.no_room")
                     .formatted(net.minecraft.util.Formatting.RED),
                 false);
         } catch (Exception ignored) {

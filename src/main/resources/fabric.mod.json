@@ -8,7 +8,11 @@
   "authors": [
     "B_E_E"
   ],
-  "contact": {},
+  "contact": {
+    "homepage": "https://github.com/BEEandRandomNames/BetterHotbarSwap",
+    "sources": "https://github.com/BEEandRandomNames/BetterHotbarSwap",
+    "issues": "https://github.com/BEEandRandomNames/BetterHotbarSwap/issues"
+  },
   "license": "MIT",
   "environment": "client",
   "entrypoints": {

@@ -18,7 +18,7 @@ import java.util.List;
 // Satır numarası = kayıt yuvası = dünyadaki "Yükle tuşu + o kısayol".
 // Survival'da envanterde OLMAYAN eşyalar kırmızı tonla gösterilir.
 public final class BHSToolbarScreen extends Screen {
-    private static final net.minecraft.util.Identifier HOTBAR = new net.minecraft.util.Identifier("hud/hotbar");
+    private static final net.minecraft.util.Identifier HOTBAR = net.minecraft.util.Identifier.ofVanilla("hud/hotbar");
     private static final int HOTBAR_W = 182;
     private static final int ROW_H = 24;
     private static final int BTN_W = 50;

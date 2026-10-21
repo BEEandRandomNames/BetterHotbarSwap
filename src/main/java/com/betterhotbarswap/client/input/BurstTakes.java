@@ -106,10 +106,12 @@ public final class BurstTakes {
                 for (int i = 0; i < grid.length; i++) {
                     craftCopy.setStack(i, handler.getSlot(gridFrom + i).getStack().copy());
                 }
+                // 1.21+: tarif girdisi envanter değil, ondan üretilen CraftingRecipeInput.
+                net.minecraft.recipe.input.CraftingRecipeInput input = craftCopy.createRecipeInput();
                 Optional<net.minecraft.recipe.RecipeEntry<CraftingRecipe>> match = client.world.getRecipeManager()
-                    .getFirstMatch(RecipeType.CRAFTING, craftCopy, client.world);
+                    .getFirstMatch(RecipeType.CRAFTING, input, client.world);
                 if (match.isEmpty()) return null;
-                for (ItemStack rem : match.get().value().getRemainder(craftCopy)) {
+                for (ItemStack rem : match.get().value().getRemainder(input)) {
                     if (!rem.isEmpty()) return null;
                 }
             } else {

@@ -13,6 +13,7 @@ import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
 
@@ -35,6 +36,14 @@ public final class BHSToolbarScreen extends Screen {
     private final List<Integer> shown = new ArrayList<>();
     private int left;
     private int top;
+    // Kaydırma (çok kayıt ya da büyük arayüz ölçeği): görünen ilk satır + görünür satır sayısı.
+    // Fare tekerleği veya sağdaki vanilla kaydırma çubuğu (sürüklenir/tıklanır).
+    private int scroll;
+    private int visible;
+    private boolean dragging;
+    private static final Identifier SCROLLER = Identifier.withDefaultNamespace("widget/scroller");
+    private static final Identifier SCROLLER_BG = Identifier.withDefaultNamespace("widget/scroller_background");
+    private static final int BAR_W = 6;
 
     public BHSToolbarScreen(Screen parent) {
         super(Component.translatable("betterhotbarswap.toolbar.title"));
@@ -47,9 +56,11 @@ public final class BHSToolbarScreen extends Screen {
         for (int i = 0; i < 9; i++) if (!SurvivalToolbars.isEmpty(minecraft, i)) shown.add(i);
         left = width / 2 - ROW_W / 2;
         top = 32;
-        for (int r = 0; r < shown.size(); r++) {
+        visible = Math.max(1, (height - 48 - top) / ROW_H);
+        scroll = Math.max(0, Math.min(scroll, maxScroll()));
+        for (int r = scroll; r < Math.min(shown.size(), scroll + visible); r++) {
             int idx = shown.get(r);
-            int y = top + r * ROW_H;
+            int y = rowY(r);
             int bx = left + 14 + HOTBAR_W + 4;
             addRenderableWidget(Button.builder(Component.translatable("betterhotbarswap.toolbar.load"),
                 b -> SurvivalToolbars.load(minecraft, idx)).bounds(bx, y + 1, BTN_W, 20).build());
@@ -85,9 +96,9 @@ public final class BHSToolbarScreen extends Screen {
         }
         boolean hoveredBar = false;
         Inventory inv = minecraft.player != null ? minecraft.player.getInventory() : null;
-        for (int r = 0; r < shown.size(); r++) {
+        for (int r = scroll; r < Math.min(shown.size(), scroll + visible); r++) {
             int idx = shown.get(r);
-            int y = top + r * ROW_H;
+            int y = rowY(r);
             context.text(font, String.valueOf(idx + 1), left + 2, y + 7, 0xFFFFFFFF);
             int hx = left + 14;
             // Oyunun KENDİ hotbar görseli (oyundakiyle birebir, kaynak paketine uyar).
@@ -113,18 +124,24 @@ public final class BHSToolbarScreen extends Screen {
                 hoveredBar = true;
             }
         }
+        if (maxScroll() > 0) {
+            int h = visible * ROW_H;
+            int th = Math.max(16, h * visible / shown.size());
+            context.blitSprite(RenderPipelines.GUI_TEXTURED, SCROLLER_BG, barX(), top, BAR_W, h);
+            context.blitSprite(RenderPipelines.GUI_TEXTURED, SCROLLER, barX(), top + (h - th) * scroll / maxScroll(), BAR_W, th);
+        }
         Component hint = Component.translatable("betterhotbarswap.toolbar.hint",
             com.betterhotbarswap.client.BetterHotbarSwapClient.getToolbarSaveKey().getTranslatedKeyMessage(),
             com.betterhotbarswap.client.BetterHotbarSwapClient.getToolbarLoadKey().getTranslatedKeyMessage());
         context.centeredText(font, hint, width / 2, height - 42, 0xFFA0A0A0);
         long since = System.currentTimeMillis() - savedAtMs;
         int savedRow = shown.indexOf(savedIndex);
-        if (since < SAVED_SHOW_MS && savedRow >= 0) {
+        if (since < SAVED_SHOW_MS && savedRow >= scroll && savedRow < scroll + visible) {
             // Son 500 ms'de solar (alfa 4'ün altında font hiç çizmez).
             int alpha = (int) (255 * Math.min(1.0, (SAVED_SHOW_MS - since) / 500.0));
             Component saved = Component.translatable("betterhotbarswap.toolbar.saved");
             int x = Math.max(2, left - 4 - font.width(saved));
-            if (alpha > 4) context.text(font, saved, x, top + savedRow * ROW_H + 7, (alpha << 24) | 0x55FF55);
+            if (alpha > 4) context.text(font, saved, x, rowY(savedRow) + 7, (alpha << 24) | 0x55FF55);
         }
         // Vanilla'nın "Düzenle" çevirisi: her dilde hazır.
         if (hoveredBar) context.setTooltipForNextFrame(font, Component.translatable("selectWorld.edit"), mouseX, mouseY);
@@ -142,14 +159,63 @@ public final class BHSToolbarScreen extends Screen {
         double mx = event.x();
         double my = event.y();
         int button = event.button();
-        for (int r = 0; r < shown.size(); r++) {
-            int y = top + r * ROW_H;
+        if (button == 0 && maxScroll() > 0 && mx >= barX() && mx < barX() + BAR_W && my >= top && my < top + visible * ROW_H) {
+            dragging = true;
+            scrollTo(my);
+            return true;
+        }
+        for (int r = scroll; r < Math.min(shown.size(), scroll + visible); r++) {
+            int y = rowY(r);
             if (button == 0 && mx >= left + 14 && mx < left + 14 + HOTBAR_W && my >= y && my < y + 22) {
                 minecraft.setScreen(new BHSToolbarEditScreen(this, shown.get(r)));
                 return true;
             }
         }
         return false;
+    }
+
+    private int rowY(int r) {
+        return top + (r - scroll) * ROW_H;
+    }
+
+    private int maxScroll() {
+        return Math.max(0, shown.size() - visible);
+    }
+
+    private int barX() {
+        return left + ROW_W + 4;
+    }
+
+    private void setScroll(int s) {
+        s = Math.max(0, Math.min(s, maxScroll()));
+        if (s == scroll) return;
+        scroll = s;
+        rebuildWidgets();
+    }
+
+    // Çubukta tutulan yükseklik oranı = kaydırma oranı.
+    private void scrollTo(double my) {
+        setScroll((int) Math.round((my - top) / (visible * ROW_H) * maxScroll()));
+    }
+
+    @Override
+    public boolean mouseScrolled(double mx, double my, double sx, double sy) {
+        if (sy == 0 || maxScroll() == 0) return super.mouseScrolled(mx, my, sx, sy);
+        setScroll(scroll - (int) Math.signum(sy));
+        return true;
+    }
+
+    @Override
+    public boolean mouseDragged(MouseButtonEvent event, double dx, double dy) {
+        if (!dragging) return super.mouseDragged(event, dx, dy);
+        scrollTo(event.y());
+        return true;
+    }
+
+    @Override
+    public boolean mouseReleased(MouseButtonEvent event) {
+        dragging = false;
+        return super.mouseReleased(event);
     }
 
     // Açan tuşa tekrar basınca kapanır (vanilla envanter tuşu gibi).

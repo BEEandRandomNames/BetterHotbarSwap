@@ -23,7 +23,7 @@
   "betterhotbarswap.toolbar.delete": "削除",
   "betterhotbarswap.toolbar.edit_title": "ツールバー %s — 編集",
   "betterhotbarswap.toolbar.edit_hint": "ツールバーをクリックして編集",
-  "betterhotbarswap.toolbar.edit_help": "ドラッグ＆ドロップかクリックで移動。並べ替えるだけで、何も増えません。赤：今インベントリにないもの。",
+  "betterhotbarswap.toolbar.edit_help": "アイテムをクリックで持ち上げ、スロットをクリックで置きます。並べ替えるだけで、何も増えません。赤：今インベントリにないもの。",
   "betterhotbarswap.toolbar.add": "ツールバーを追加",
   "betterhotbarswap.toolbar.add.desc": "現在の配置（ホットバー、インベントリ、オフハンド）を最初の空きスロットに保存します。",
   "betterhotbarswap.toolbar.full": "9 個すべて使用中です。先に1つ削除してください。",

@@ -23,7 +23,7 @@
   "betterhotbarswap.toolbar.delete": "Supprimer",
   "betterhotbarswap.toolbar.edit_title": "Barre d'outils %s — Modifier",
   "betterhotbarswap.toolbar.edit_hint": "Clique sur une barre pour la modifier",
-  "betterhotbarswap.toolbar.edit_help": "Glisse-dépose ou clique pour déplacer ; on ne fait que réorganiser, rien n'est dupliqué. Rouge : absent de ton inventaire.",
+  "betterhotbarswap.toolbar.edit_help": "Clique sur un objet pour le prendre, clique sur un emplacement pour le poser ; on ne fait que réorganiser, rien n'est dupliqué. Rouge : absent de ton inventaire.",
   "betterhotbarswap.toolbar.add": "Ajouter une barre",
   "betterhotbarswap.toolbar.add.desc": "Sauvegarde ta disposition actuelle (barre, inventaire et seconde main) dans le premier emplacement libre.",
   "betterhotbarswap.toolbar.full": "Les 9 emplacements sont utilisés, supprimes-en un d'abord.",

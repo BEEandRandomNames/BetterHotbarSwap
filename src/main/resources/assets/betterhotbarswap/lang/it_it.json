@@ -23,7 +23,7 @@
   "betterhotbarswap.toolbar.delete": "Elimina",
   "betterhotbarswap.toolbar.edit_title": "Barra degli strumenti %s — Modifica",
   "betterhotbarswap.toolbar.edit_hint": "Clicca su una barra per modificarla",
-  "betterhotbarswap.toolbar.edit_help": "Trascina e rilascia o clicca per spostare; si riordina soltanto, nulla viene duplicato. Rosso: non è nel tuo inventario ora.",
+  "betterhotbarswap.toolbar.edit_help": "Clicca un oggetto per prenderlo, clicca uno slot per posarlo; si riordina soltanto, nulla viene duplicato. Rosso: non è nel tuo inventario ora.",
   "betterhotbarswap.toolbar.add": "Aggiungi barra",
   "betterhotbarswap.toolbar.add.desc": "Salva la tua disposizione attuale (barra, inventario e mano secondaria) nel primo slot libero.",
   "betterhotbarswap.toolbar.full": "Tutti i 9 slot sono occupati, eliminane prima uno.",

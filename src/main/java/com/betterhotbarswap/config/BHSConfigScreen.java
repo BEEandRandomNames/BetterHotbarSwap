@@ -91,9 +91,8 @@ public final class BHSConfigScreen extends Screen {
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        renderBackground(context);
+        super.render(context, mouseX, mouseY, delta); // 1.20.2+: Screen.render arka plan + düğmeleri çizer; içerik üstüne
         context.drawCenteredTextWithShadow(textRenderer, title, width / 2, 15, 0xFFFFFF);
-        super.render(context, mouseX, mouseY, delta);
     }
 
     @Override

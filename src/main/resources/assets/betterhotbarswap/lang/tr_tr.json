@@ -23,7 +23,7 @@
   "betterhotbarswap.toolbar.delete": "Sil",
   "betterhotbarswap.toolbar.edit_title": "Araç Çubuğu %s — Düzenle",
   "betterhotbarswap.toolbar.edit_hint": "Düzenlemek için bir çubuğa tıkla",
-  "betterhotbarswap.toolbar.edit_help": "Eşyaları sürükleyip bırak ya da tıklayıp taşı; sadece yer değiştirir, hiçbir şey çoğalmaz. Kırmızı: şu an envanterinde yok.",
+  "betterhotbarswap.toolbar.edit_help": "Eşyaya tıklayıp al, gideceği slota tıklayıp bırak; sadece yer değiştirir, hiçbir şey çoğalmaz. Kırmızı: şu an envanterinde yok.",
   "betterhotbarswap.toolbar.add": "Araç Çubuğu Ekle",
   "betterhotbarswap.toolbar.add.desc": "Şu anki düzenini (hotbar, envanter ve sol el) ilk boş yuvaya kaydeder.",
   "betterhotbarswap.toolbar.full": "9 yuvanın hepsi dolu, önce birini sil.",

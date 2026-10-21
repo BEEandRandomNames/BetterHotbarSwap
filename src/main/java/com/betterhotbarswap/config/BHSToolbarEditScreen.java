@@ -16,7 +16,7 @@ import java.util.List;
 // Kayıtlı düzen düzenleyici (sadece şablon; gerçek envantere DOKUNMAZ, paket yok).
 // Vanilla envanter paneli: envanter 3 sıra + hotbar + solda sol el slotu. Şablonun
 // kendisi gösterilir ve SADECE yer değiştirme yapılır (permütasyon): hiçbir eşya
-// çoğalmaz ya da kaybolmaz. Tıkla-al/tıkla-bırak ya da sürükle-bırak; dolu slota
+// çoğalmaz ya da kaybolmaz. SADECE tıkla-al / tıkla-bırak (sürükle-bırak kullanıcı isteğiyle yok); dolu slota
 // bırakmak takas. İmleçteki eşya boşluğa tıklanınca/ekran kapanınca alındığı yere döner.
 // Envanterde olmayan eşyalar kırmızı tonlu (yüklemede atlanır). Bitti kaydeder.
 public final class BHSToolbarEditScreen extends Screen {
@@ -29,7 +29,6 @@ public final class BHSToolbarEditScreen extends Screen {
     private final ItemStack[] slots = new ItemStack[ToolbarStorage.SIZE];
     private ItemStack cursor = ItemStack.EMPTY;
     private int cursorFrom = -1; // imleçteki eşyanın geldiği slot (geri koymak için)
-    private boolean dragging;
     private int px;
     private int py;
 
@@ -105,35 +104,13 @@ public final class BHSToolbarEditScreen extends Screen {
             dropCursor();
             return true;
         }
-        boolean wasEmpty = cursor.isEmpty();
         clickSlot(t);
-        dragging = wasEmpty && !cursor.isEmpty();
         return true;
-    }
-
-    // Sürükle-bırak: aldığın slottan farklı bir slotta bırakılırsa yerleştir.
-    @Override
-    public boolean mouseReleased(double mx, double my, int button) {
-        if (dragging && !cursor.isEmpty()) {
-            int t = slotAt(mx, my);
-            if (t != -1 && t != cursorFrom) {
-                int from = cursorFrom;
-                clickSlot(t);
-                // Hedefte eşya vardıysa aldığın (artık boş) slota geçer: takas.
-                if (!cursor.isEmpty() && from >= 0 && slots[from].isEmpty()) {
-                    slots[from] = cursor;
-                    cursor = ItemStack.EMPTY;
-                    cursorFrom = -1;
-                }
-            }
-        }
-        dragging = false;
-        return super.mouseReleased(mx, my, button);
     }
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        renderBackground(context);
+        super.render(context, mouseX, mouseY, delta); // 1.20.2+: Screen.render arka plan + düğmeleri çizer; içerik üstüne
         context.drawCenteredTextWithShadow(textRenderer, title, width / 2, 12, 0xFFFFFF);
         int ty = 24;
         for (OrderedText line : textRenderer.wrapLines(Text.translatable("betterhotbarswap.toolbar.edit_help"), width - 40)) {
@@ -162,7 +139,6 @@ public final class BHSToolbarEditScreen extends Screen {
             if (inv != null && !st.isEmpty() && !has(inv, st)) context.fill(x + 1, y + 1, x + 17, y + 17, 300, 0x66FF0000);
             if (t == hovered) context.fill(x + 1, y + 1, x + 17, y + 17, 300, 0x80FFFFFF);
         }
-        super.render(context, mouseX, mouseY, delta);
         if (!cursor.isEmpty()) {
             context.getMatrices().push();
             context.getMatrices().translate(0, 0, 400);
@@ -188,7 +164,7 @@ public final class BHSToolbarEditScreen extends Screen {
     }
 
     // Vanilla çökük slot (18x18).
-    private static void slot(DrawContext c, int x, int y) {
+    static void slot(DrawContext c, int x, int y) {
         c.fill(x, y, x + 18, y + 18, 0xFF373737);
         c.fill(x + 1, y + 1, x + 18, y + 18, 0xFFFFFFFF);
         c.fill(x + 1, y + 1, x + 17, y + 17, 0xFF8B8B8B);

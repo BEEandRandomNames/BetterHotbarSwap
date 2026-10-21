@@ -106,10 +106,10 @@ public final class BurstTakes {
                 for (int i = 0; i < grid.length; i++) {
                     craftCopy.setStack(i, handler.getSlot(gridFrom + i).getStack().copy());
                 }
-                Optional<CraftingRecipe> match = client.world.getRecipeManager()
+                Optional<net.minecraft.recipe.RecipeEntry<CraftingRecipe>> match = client.world.getRecipeManager()
                     .getFirstMatch(RecipeType.CRAFTING, craftCopy, client.world);
                 if (match.isEmpty()) return null;
-                for (ItemStack rem : match.get().getRemainder(craftCopy)) {
+                for (ItemStack rem : match.get().value().getRemainder(craftCopy)) {
                     if (!rem.isEmpty()) return null;
                 }
             } else {

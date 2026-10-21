@@ -13,7 +13,7 @@ import net.minecraft.util.Util;
 // açılışta yine sorar, Hayır = bir daha hiç sormaz (config). ESC = Şimdi değil.
 public final class BHSUpdateScreen extends Screen {
     private static final int BTN_W = 100;
-    // Özel ad çevrilmez; altın sarısı (kullanıcı isteği). Dil metinleri onu argüman alır.
+    // Özel ad çevrilmez; başlıkta altın sarısı, mesajda düz beyaz (kullanıcı isteği).
     private static final Text NAME = Text.literal("BetterHotbarSwap").formatted(Formatting.GOLD);
 
     private final Screen parent;
@@ -25,7 +25,7 @@ public final class BHSUpdateScreen extends Screen {
         super(Text.translatable("betterhotbarswap.update.title", NAME));
         this.parent = parent;
         this.url = url;
-        this.message = Text.translatable("betterhotbarswap.update.message", NAME, version);
+        this.message = Text.translatable("betterhotbarswap.update.message", NAME.getString(), version);
     }
 
     @Override

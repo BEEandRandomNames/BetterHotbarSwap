@@ -33,5 +33,7 @@
   "betterhotbarswap.toolbar.loaded": "Werkzeugleiste %s geladen (%s/%s Gegenstände)",
   "betterhotbarswap.msg.no_room": "Kein Platz — schaffe Platz im Inventar.",
   "betterhotbarswap.msg.stalled": "Aufnahme hängt — Mauszeiger leeren und Menü neu öffnen.",
-  "betterhotbarswap.toolbar.saved": "Gespeichert"
+  "betterhotbarswap.toolbar.saved": "Gespeichert",
+  "modmenu.summaryTranslation.betterhotbarswap": "Macht Minecrafts Hotkey-Zuweisung funktionaler und intelligenter.",
+  "modmenu.descriptionTranslation.betterhotbarswap": "Macht Minecrafts Hotkey-Zuweisung funktionaler und intelligenter. Außerdem ermöglicht es eine ganz neue Art, Hotkeys zu nutzen."
 }

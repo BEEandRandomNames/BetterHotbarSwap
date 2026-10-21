@@ -33,5 +33,7 @@
   "betterhotbarswap.toolbar.loaded": "Barra degli strumenti %s caricata (%s/%s oggetti)",
   "betterhotbarswap.msg.no_room": "Spazio esaurito — libera spazio nell'inventario.",
   "betterhotbarswap.msg.stalled": "Raccolta bloccata — svuota il cursore e riapri la schermata.",
-  "betterhotbarswap.toolbar.saved": "Salvato"
+  "betterhotbarswap.toolbar.saved": "Salvato",
+  "modmenu.summaryTranslation.betterhotbarswap": "Rende il sistema di assegnazione dei tasti rapidi di Minecraft più funzionale e intelligente.",
+  "modmenu.descriptionTranslation.betterhotbarswap": "Rende il sistema di assegnazione dei tasti rapidi di Minecraft più funzionale e intelligente. Inoltre permette un modo del tutto nuovo di usare i tasti rapidi."
 }

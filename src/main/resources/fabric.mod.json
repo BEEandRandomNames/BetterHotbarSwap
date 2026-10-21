@@ -3,8 +3,11 @@
   "id": "betterhotbarswap",
   "version": "${version}",
   "name": "BetterHotbarSwap",
-  "description": "Smarter hotbar assignment and inventory flow for Minecraft.",
-  "authors": ["BetterHotbarSwap Team"],
+  "description": "Makes Minecraft's hotkey assignment system more functional and smarter. It also enables a whole new way of using hotkeys.",
+  "icon": "assets/betterhotbarswap/icon.png",
+  "authors": [
+    "BetterHotbarSwap Team"
+  ],
   "contact": {},
   "license": "MIT",
   "environment": "client",

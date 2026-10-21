@@ -33,5 +33,7 @@
   "betterhotbarswap.toolbar.loaded": "Araç çubuğu %s yüklendi (%s/%s eşya)",
   "betterhotbarswap.msg.no_room": "Yer yok — envanterinde boş yer aç.",
   "betterhotbarswap.msg.stalled": "Alım takıldı — imleci boşaltıp ekranı kapatıp tekrar aç.",
-  "betterhotbarswap.toolbar.saved": "Kaydedildi"
+  "betterhotbarswap.toolbar.saved": "Kaydedildi",
+  "modmenu.summaryTranslation.betterhotbarswap": "Minecraft'ın kısayol atama sistemini daha işlevsel ve akıllı hale getirir.",
+  "modmenu.descriptionTranslation.betterhotbarswap": "Minecraft'ın kısayol atama sistemini daha işlevsel ve akıllı hale getirir. Bununla birlikte kısayol atamada yeni bir kullanım şeklinin önünü açar."
 }

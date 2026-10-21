@@ -33,5 +33,7 @@
   "betterhotbarswap.toolbar.loaded": "Barre d'outils %s chargée (%s/%s objets)",
   "betterhotbarswap.msg.no_room": "Pas de place — libère de l'espace dans l'inventaire.",
   "betterhotbarswap.msg.stalled": "Ramassage bloqué — vide ton curseur et rouvre l'écran.",
-  "betterhotbarswap.toolbar.saved": "Enregistré"
+  "betterhotbarswap.toolbar.saved": "Enregistré",
+  "modmenu.summaryTranslation.betterhotbarswap": "Rend le système d'attribution des raccourcis de Minecraft plus pratique et plus intelligent.",
+  "modmenu.descriptionTranslation.betterhotbarswap": "Rend le système d'attribution des raccourcis de Minecraft plus pratique et plus intelligent. Il permet aussi une toute nouvelle façon d'utiliser les raccourcis."
 }

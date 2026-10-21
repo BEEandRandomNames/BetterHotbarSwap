@@ -33,5 +33,7 @@
   "betterhotbarswap.toolbar.loaded": "Toolbar %s loaded (%s/%s items)",
   "betterhotbarswap.msg.no_room": "No room — free up some inventory space.",
   "betterhotbarswap.msg.stalled": "Pickup got stuck — empty your cursor and reopen the screen.",
-  "betterhotbarswap.toolbar.saved": "Saved"
+  "betterhotbarswap.toolbar.saved": "Saved",
+  "modmenu.summaryTranslation.betterhotbarswap": "Makes Minecraft's hotkey assignment system more functional and smarter.",
+  "modmenu.descriptionTranslation.betterhotbarswap": "Makes Minecraft's hotkey assignment system more functional and smarter. It also enables a whole new way of using hotkeys."
 }

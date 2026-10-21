@@ -33,5 +33,7 @@
   "betterhotbarswap.toolbar.loaded": "已加载工具栏 %s（%s/%s 个物品）",
   "betterhotbarswap.msg.no_room": "没有空间——请清理物品栏。",
   "betterhotbarswap.msg.stalled": "拿取卡住了——请清空光标并重新打开界面。",
-  "betterhotbarswap.toolbar.saved": "已保存"
+  "betterhotbarswap.toolbar.saved": "已保存",
+  "modmenu.summaryTranslation.betterhotbarswap": "让 Minecraft 的快捷键分配系统更实用、更智能。",
+  "modmenu.descriptionTranslation.betterhotbarswap": "让 Minecraft 的快捷键分配系统更实用、更智能。同时，它带来了一种使用快捷键的全新方式。"
 }

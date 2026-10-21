@@ -186,7 +186,7 @@ public final class SurvivalToolbars {
     }
 
     private static boolean exact(ItemStack a, ItemStack b) {
-        return sameItem(a, b) && java.util.Objects.equals(a.getNbt(), b.getNbt());
+        return sameItem(a, b) && ItemStack.areItemsAndComponentsEqual(a, b);
     }
 
     private static void message(MinecraftClient client, Text text) {

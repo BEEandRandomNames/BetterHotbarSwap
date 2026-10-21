@@ -86,7 +86,7 @@ public final class BurstTakes {
                 ItemStack outNow = handler.getSlot(0).getStack();
                 if (outNow.isEmpty() || outNow.getItem() != anchor.getItem()
                     || outNow.getCount() != anchor.getCount()
-                    || !java.util.Objects.equals(outNow.getNbt(), anchor.getNbt())) {
+                    || !ItemStack.areItemsAndComponentsEqual(outNow, anchor)) {
                     // Odak dışı senkron kayması: güvenli yola düş.
                     return null;
                 }
@@ -369,6 +369,6 @@ public final class BurstTakes {
     private static boolean isSame(ItemStack a, ItemStack b) {
         if (a == null || b == null || a.isEmpty() || b.isEmpty()) return false;
         if (a.getItem() != b.getItem()) return false;
-        return java.util.Objects.equals(a.getNbt(), b.getNbt());
+        return ItemStack.areItemsAndComponentsEqual(a, b);
     }
 }

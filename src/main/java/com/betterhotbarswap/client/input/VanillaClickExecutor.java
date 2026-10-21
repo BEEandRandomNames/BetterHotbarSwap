@@ -56,7 +56,7 @@ public class VanillaClickExecutor {
     private static boolean isSameStackable(ItemStack a, ItemStack b) {
         if (a.isEmpty() || b.isEmpty()) return false;
         if (a.getItem() != b.getItem()) return false;
-        return java.util.Objects.equals(a.getNbt(), b.getNbt());
+        return ItemStack.areItemsAndComponentsEqual(a, b);
     }
     // Oyuncu slotunun standart server pozisyonu (PlayerScreenHandler düzeni):
     // hotbar 36-44, main 9-35, zırh 36-39 -> 8,7,6,5, offhand 40 -> 45.
@@ -855,7 +855,7 @@ public class VanillaClickExecutor {
             try {
                 ItemStack curT = client.player.getInventory().getStack(target.getIndex());
                 if (!curT.isEmpty() && (curT.getItem() != oldHotbarStack.getItem()
-                    || !java.util.Objects.equals(curT.getNbt(), oldHotbarStack.getNbt()))) {
+                    || !ItemStack.areItemsAndComponentsEqual(curT, oldHotbarStack))) {
                     BHSDebug.log("SKIP stale next-tick replaced id=" + actionId);
                     return;
                 }

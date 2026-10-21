@@ -81,7 +81,7 @@ public class CreativeInventoryScreenHotbarMixin {
     private static boolean isSameStackable(ItemStack a, ItemStack b) {
         if (a.isEmpty() || b.isEmpty()) return false;
         if (a.getItem() != b.getItem()) return false;
-        return Objects.equals(a.getNbt(), b.getNbt());
+        return ItemStack.areItemsAndComponentsEqual(a, b);
     }
     // Stack sırası: SADECE hotbar, basılana yakınlık (basılan hariç). Envanter
     // ancak hotbar'da hiç yer yoksa denenir (kural 2026-10-21: hotbar'da kalır).
@@ -300,7 +300,7 @@ public class CreativeInventoryScreenHotbarMixin {
                         return;
                     }
                     if (cur.getItem() != finalNewStack.getItem()
-                        || !Objects.equals(cur.getNbt(), finalNewStack.getNbt())) {
+                        || !ItemStack.areItemsAndComponentsEqual(cur, finalNewStack)) {
                         BHSDebug.log("SKIP next-tick replaced id=" + actionId);
                         return;
                     }

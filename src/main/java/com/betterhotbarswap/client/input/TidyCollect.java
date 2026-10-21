@@ -365,7 +365,7 @@ public final class TidyCollect {
     private static boolean isSame(ItemStack a, ItemStack b) {
         if (a == null || b == null || a.isEmpty() || b.isEmpty()) return false;
         if (a.getItem() != b.getItem()) return false;
-        return java.util.Objects.equals(a.getNbt(), b.getNbt());
+        return ItemStack.areItemsAndComponentsEqual(a, b);
     }
 
     public static String slotName(int idx) {

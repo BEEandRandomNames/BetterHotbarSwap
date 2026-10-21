@@ -461,13 +461,13 @@ public final class ShiftBulkQuickMove {
     private static boolean isSameStackable(ItemStack a, ItemStack b) {
         if (a.isEmpty() || b.isEmpty()) return false;
         if (a.getItem() != b.getItem()) return false;
-        return java.util.Objects.equals(a.getNbt(), b.getNbt());
+        return ItemStack.areItemsAndComponentsEqual(a, b);
     }
 
     private static String keyOf(ItemStack s) {
         if (s == null || s.isEmpty()) return "empty";
         try {
-            return s.getItem().toString() + "|" + s.getNbt();
+            return s.getItem().toString() + "|" + s.getComponentChanges();
         } catch (Exception e) {
             return s.getItem().toString();
         }

@@ -47,6 +47,8 @@ public final class BurstTakes {
         public final List<BurstClick> clicks = new ArrayList<>();
         public final Map<Integer, ItemStack> predicted = new HashMap<>();
         public int crafts;
+        public int outputSlotId = -1;
+        public ItemStack output = ItemStack.EMPTY;
     }
 
     private static final int MAX_CRAFTS = 96;
@@ -160,6 +162,8 @@ public final class BurstTakes {
             simOut.setCount(r);
             int max = Math.max(1, anchor.getMaxCount());
             BurstPlan plan = new BurstPlan();
+            plan.outputSlotId = outputRealId;
+            plan.output = simOut.copy();
             int takes = 0;
 
             for (int c = 0; c < crafts && takes < 160; c++) {
@@ -255,6 +259,11 @@ public final class BurstTakes {
     public static void fire(MinecraftClient client, ScreenHandler handler, BurstPlan plan, int hotbarIndex) {
         if (client == null || client.interactionManager == null || plan == null) return;
         for (BurstClick c : plan.clicks) {
+            // İstemci çıktıyı KENDİSİ yeniden doldurmaz (CraftingScreenHandler istemcide
+            // sonucu hesaplamaz). Sunucunun dolduracağı ürünü önce yerelde koy: tıklama
+            // tahmini sunucuyla aynı olur; yoksa PICKUP(hedef) hayalet imleç üretir ve
+            // "imleç kurtarma" gerçek dolu slotu imlece çeker (#46, 2026-10-22).
+            if (c.slotId() == plan.outputSlotId) handler.getSlot(c.slotId()).setStack(plan.output.copy());
             client.interactionManager.clickSlot(handler.syncId, c.slotId(), c.button(), c.action(), client.player);
         }
         PlayerInventory inv = client.player.getInventory();

@@ -10,7 +10,8 @@ import net.minecraft.nbt.NbtIo;
 import net.minecraft.nbt.NbtList;
 import net.minecraft.util.collection.DefaultedList;
 
-import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 
 // 9 kayıt yuvası, her biri TAM envanter düzeni: index = PlayerInventory index
@@ -22,13 +23,13 @@ public final class ToolbarStorage {
     public static final int SIZE = 37;
     public static final int OFFHAND = 36;
 
-    private final File file;
+    private final Path file; // 1.20.3+: NbtIo File yerine Path alır (vanilla HotbarStorage da öyle)
     private final DataFixer fixer;
     @SuppressWarnings("unchecked")
     private final DefaultedList<ItemStack>[] bars = new DefaultedList[9];
     private boolean loaded;
 
-    public ToolbarStorage(File file, DataFixer fixer) {
+    public ToolbarStorage(Path file, DataFixer fixer) {
         this.file = file;
         this.fixer = fixer;
         for (int i = 0; i < 9; i++) bars[i] = DefaultedList.ofSize(SIZE, ItemStack.EMPTY);
@@ -47,6 +48,7 @@ public final class ToolbarStorage {
     private void load() {
         loaded = true;
         try {
+            if (!Files.exists(file)) return;
             NbtCompound nbt = NbtIo.read(file);
             if (nbt == null) return;
             nbt = DataFixTypes.HOTBAR.update(fixer, nbt, NbtHelper.getDataVersion(nbt, 1343));

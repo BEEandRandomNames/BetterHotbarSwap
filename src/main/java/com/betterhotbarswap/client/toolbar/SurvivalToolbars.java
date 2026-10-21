@@ -57,7 +57,7 @@ public final class SurvivalToolbars {
     public static ToolbarStorage storage(MinecraftClient client) {
         if (storage == null) {
             storage = new ToolbarStorage(net.fabricmc.loader.api.FabricLoader.getInstance().getConfigDir()
-                .resolve("betterhotbarswap_toolbars.nbt").toFile(), client.getDataFixer());
+                .resolve("betterhotbarswap_toolbars.nbt"), client.getDataFixer());
         }
         return storage;
     }

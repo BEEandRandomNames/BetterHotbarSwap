@@ -35,5 +35,8 @@
   "betterhotbarswap.msg.stalled": "La recogida se atascó — vacía el cursor y vuelve a abrir la pantalla.",
   "betterhotbarswap.toolbar.saved": "Guardado",
   "modmenu.summaryTranslation.betterhotbarswap": "Hace que el sistema de asignación de atajos de Minecraft sea más funcional e inteligente.",
-  "modmenu.descriptionTranslation.betterhotbarswap": "Hace que el sistema de asignación de atajos de Minecraft sea más funcional e inteligente. Además, permite una forma totalmente nueva de usar los atajos."
+  "modmenu.descriptionTranslation.betterhotbarswap": "Hace que el sistema de asignación de atajos de Minecraft sea más funcional e inteligente. Además, permite una forma totalmente nueva de usar los atajos.",
+  "betterhotbarswap.update.title": "Actualización de %s",
+  "betterhotbarswap.update.message": "Ya está disponible %1$s %2$s. ¿Quieres actualizar el mod?",
+  "betterhotbarswap.update.later": "Ahora no"
 }

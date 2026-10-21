@@ -35,5 +35,8 @@
   "betterhotbarswap.msg.stalled": "Aufnahme hängt — Mauszeiger leeren und Menü neu öffnen.",
   "betterhotbarswap.toolbar.saved": "Gespeichert",
   "modmenu.summaryTranslation.betterhotbarswap": "Macht Minecrafts Hotkey-Zuweisung funktionaler und intelligenter.",
-  "modmenu.descriptionTranslation.betterhotbarswap": "Macht Minecrafts Hotkey-Zuweisung funktionaler und intelligenter. Außerdem ermöglicht es eine ganz neue Art, Hotkeys zu nutzen."
+  "modmenu.descriptionTranslation.betterhotbarswap": "Macht Minecrafts Hotkey-Zuweisung funktionaler und intelligenter. Außerdem ermöglicht es eine ganz neue Art, Hotkeys zu nutzen.",
+  "betterhotbarswap.update.title": "%s-Update",
+  "betterhotbarswap.update.message": "%1$s %2$s ist erschienen. Möchtest du die Mod aktualisieren?",
+  "betterhotbarswap.update.later": "Nicht jetzt"
 }

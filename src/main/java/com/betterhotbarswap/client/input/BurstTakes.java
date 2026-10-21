@@ -1,23 +1,22 @@
 package com.betterhotbarswap.client.input;
 
 import com.betterhotbarswap.client.debug.BHSDebug;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.inventory.CraftingInventory;
-import net.minecraft.item.ItemStack;
-import net.minecraft.recipe.CraftingRecipe;
-import net.minecraft.recipe.RecipeType;
-import net.minecraft.screen.CraftingScreenHandler;
-import net.minecraft.screen.PlayerScreenHandler;
-import net.minecraft.screen.ScreenHandler;
-import net.minecraft.screen.slot.Slot;
-import net.minecraft.screen.slot.SlotActionType;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import net.minecraft.client.Minecraft;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.inventory.CraftingMenu;
+import net.minecraft.world.inventory.InventoryMenu;
+import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.inventory.TransientCraftingContainer;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.CraftingRecipe;
+import net.minecraft.world.item.crafting.RecipeType;
 
 // Aynı-tick burst motoru (hız tavanı: 0.06-0.1sn algısı).
 //
@@ -40,7 +39,7 @@ public final class BurstTakes {
     private BurstTakes() {
     }
 
-    public record BurstClick(int slotId, int button, SlotActionType action) {
+    public record BurstClick(int slotId, int button, ClickType action) {
     }
 
     public static final class BurstPlan {
@@ -51,28 +50,28 @@ public final class BurstTakes {
 
     private static final int MAX_CRAFTS = 96;
 
-    public static BurstPlan plan(MinecraftClient client, ScreenHandler handler, Slot focusedSlot, int hotbarIndex, ItemStack anchor) {
+    public static BurstPlan plan(Minecraft client, AbstractContainerMenu handler, Slot focusedSlot, int hotbarIndex, ItemStack anchor) {
         try {
-            if (client == null || client.player == null || client.world == null) return null;
+            if (client == null || client.player == null || client.level == null) return null;
             if (handler == null || focusedSlot == null || anchor == null || anchor.isEmpty()) return null;
-            if (!handler.getCursorStack().isEmpty()) return null;
+            if (!handler.getCarried().isEmpty()) return null;
             if (hotbarIndex < 0 || hotbarIndex > 10) return null;
             // Sim hotbar-endekslidir: main-only (9) ve sol-el (10) burst'suzdur.
             // 9 drain'e duser, 10 tekil alimdir (controller guard).
             if (hotbarIndex > 8) return null;
-            PlayerInventory inv = client.player.getInventory();
+            Inventory inv = client.player.getInventory();
 
             // Sadece vanilya crafting handler'ları (yerleşim deterministik).
             // Masa: slot 0 output + 1-9 ızgara; envanter: slot 0 output + 1-4 ızgara.
             int gridFrom;
             int gridTo;
             int gridW;
-            boolean isCrafting = handler instanceof CraftingScreenHandler
-                || handler instanceof PlayerScreenHandler;
+            boolean isCrafting = handler instanceof CraftingMenu
+                || handler instanceof InventoryMenu;
             int[] grid;
             boolean[] used;
             if (isCrafting) {
-                if (handler instanceof CraftingScreenHandler) {
+                if (handler instanceof CraftingMenu) {
                     gridFrom = 1;
                     gridTo = 9;
                     gridW = 3;
@@ -83,35 +82,35 @@ public final class BurstTakes {
                 }
                 if (handler.slots.size() < gridTo + 1) return null;
                 if (VanillaClickExecutor.resolveSlotId(handler, focusedSlot) != 0) return null;
-                ItemStack outNow = handler.getSlot(0).getStack();
+                ItemStack outNow = handler.getSlot(0).getItem();
                 if (outNow.isEmpty() || outNow.getItem() != anchor.getItem()
                     || outNow.getCount() != anchor.getCount()
-                    || !ItemStack.areItemsAndComponentsEqual(outNow, anchor)) {
+                    || !ItemStack.isSameItemSameComponents(outNow, anchor)) {
                     // Odak dışı senkron kayması: güvenli yola düş.
                     return null;
                 }
                 // Izgara yerleşim doğrulaması (vanilya dışı yerleşim -> fallback).
                 for (int i = gridFrom; i <= gridTo; i++) {
-                    if (handler.getSlot(i).inventory == inv) return null;
+                    if (handler.getSlot(i).container == inv) return null;
                 }
                 grid = new int[gridTo - gridFrom + 1];
                 used = new boolean[grid.length];
                 for (int i = 0; i < grid.length; i++) {
-                    ItemStack s = handler.getSlot(gridFrom + i).getStack();
+                    ItemStack s = handler.getSlot(gridFrom + i).getItem();
                     grid[i] = s.isEmpty() ? 0 : s.getCount();
                     if (grid[i] > 0) used[i] = true;
                 }
                 // Tarif eşleşmesi + artık-ürün kontrolü (kova/su şişesi vb. -> fallback).
-                CraftingInventory craftCopy = new CraftingInventory(handler, gridW, gridW == 3 ? 3 : 2);
+                TransientCraftingContainer craftCopy = new TransientCraftingContainer(handler, gridW, gridW == 3 ? 3 : 2);
                 for (int i = 0; i < grid.length; i++) {
-                    craftCopy.setStack(i, handler.getSlot(gridFrom + i).getStack().copy());
+                    craftCopy.setItem(i, handler.getSlot(gridFrom + i).getItem().copy());
                 }
                 // 1.21+: tarif girdisi envanter değil, ondan üretilen CraftingRecipeInput.
-                net.minecraft.recipe.input.CraftingRecipeInput input = craftCopy.createRecipeInput();
-                Optional<net.minecraft.recipe.RecipeEntry<CraftingRecipe>> match = client.world.getRecipeManager()
-                    .getFirstMatch(RecipeType.CRAFTING, input, client.world);
+                net.minecraft.world.item.crafting.CraftingInput input = craftCopy.asCraftInput();
+                Optional<net.minecraft.world.item.crafting.RecipeHolder<CraftingRecipe>> match = client.level.getRecipeManager()
+                    .getRecipeFor(RecipeType.CRAFTING, input, client.level);
                 if (match.isEmpty()) return null;
-                for (ItemStack rem : match.get().value().getRemainder(input)) {
+                for (ItemStack rem : match.get().value().getRemainingItems(input)) {
                     if (!rem.isEmpty()) return null;
                 }
             } else {
@@ -126,7 +125,7 @@ public final class BurstTakes {
                 grid = new int[inputIds.size()];
                 used = new boolean[grid.length];
                 for (int i = 0; i < inputIds.size(); i++) {
-                    ItemStack s = handler.getSlot(inputIds.get(i)).getStack();
+                    ItemStack s = handler.getSlot(inputIds.get(i)).getItem();
                     grid[i] = s.isEmpty() ? 0 : s.getCount();
                     if (grid[i] > 0) used[i] = true;
                 }
@@ -154,11 +153,11 @@ public final class BurstTakes {
             // Yabancı-item output'a SADECE reddedilen paketle girebilirdi - artık
             // öyle paket YOK, o yüzden simOut hep çapa veya boştur.
             Map<Integer, ItemStack> sim = new HashMap<>();
-            for (int i = 0; i < 36; i++) sim.put(i, inv.getStack(i).copy());
+            for (int i = 0; i < 36; i++) sim.put(i, inv.getItem(i).copy());
             ItemStack simOut = anchor.copy();
             int r = anchor.getCount();
             simOut.setCount(r);
-            int max = Math.max(1, anchor.getMaxCount());
+            int max = Math.max(1, anchor.getMaxStackSize());
             BurstPlan plan = new BurstPlan();
             int takes = 0;
 
@@ -171,7 +170,7 @@ public final class BurstTakes {
                 // Executor ile AYNI karar sırası (survival dalı).
                 if (oldHb.isEmpty() && outputRealId != hbRealId) {
                     // BOŞ hedefe SWAP = alım (tüketim + refill). Tek paket!
-                    plan.clicks.add(new BurstClick(outputRealId, hotbarIndex, SlotActionType.SWAP));
+                    plan.clicks.add(new BurstClick(outputRealId, hotbarIndex, ClickType.SWAP));
                     ItemStack fc2 = anchor.copy();
                     fc2.setCount(fc);
                     sim.put(hotbarIndex, fc2);
@@ -181,8 +180,8 @@ public final class BurstTakes {
                     takes++;
                 } else if (sameHb && fc <= max - oldHb.getCount() && outputRealId != hbRealId) {
                     // MERGE (bütün sığar).
-                    plan.clicks.add(new BurstClick(outputRealId, 0, SlotActionType.PICKUP));
-                    plan.clicks.add(new BurstClick(hbRealId, 0, SlotActionType.PICKUP));
+                    plan.clicks.add(new BurstClick(outputRealId, 0, ClickType.PICKUP));
+                    plan.clicks.add(new BurstClick(hbRealId, 0, ClickType.PICKUP));
                     ItemStack m = oldHb.copy();
                     m.setCount(oldHb.getCount() + fc);
                     sim.put(hotbarIndex, m);
@@ -195,9 +194,9 @@ public final class BurstTakes {
                     int rem = fc - (max - oldHb.getCount());
                     int dest = findDest(sim, anchor, rem, hotbarIndex);
                     if (dest == -1 || realIds.get(dest) == -1) break;
-                    plan.clicks.add(new BurstClick(outputRealId, 0, SlotActionType.PICKUP));
-                    plan.clicks.add(new BurstClick(hbRealId, 0, SlotActionType.PICKUP));
-                    plan.clicks.add(new BurstClick(realIds.get(dest), 0, SlotActionType.PICKUP));
+                    plan.clicks.add(new BurstClick(outputRealId, 0, ClickType.PICKUP));
+                    plan.clicks.add(new BurstClick(hbRealId, 0, ClickType.PICKUP));
+                    plan.clicks.add(new BurstClick(realIds.get(dest), 0, ClickType.PICKUP));
                     ItemStack f = oldHb.copy();
                     f.setCount(max);
                     sim.put(hotbarIndex, f);
@@ -213,8 +212,8 @@ public final class BurstTakes {
                     // OVERFLOW (hedef dolu, alım taşma hedefine). Bulk ON-kuralları.
                     int dest = findDest(sim, anchor, fc, hotbarIndex);
                     if (dest == -1 || realIds.get(dest) == -1) break;
-                    plan.clicks.add(new BurstClick(outputRealId, 0, SlotActionType.PICKUP));
-                    plan.clicks.add(new BurstClick(realIds.get(dest), 0, SlotActionType.PICKUP));
+                    plan.clicks.add(new BurstClick(outputRealId, 0, ClickType.PICKUP));
+                    plan.clicks.add(new BurstClick(realIds.get(dest), 0, ClickType.PICKUP));
                     ItemStack de = sim.get(dest);
                     ItemStack dn = de.isEmpty() ? anchor.copy() : de.copy();
                     dn.setCount(de.isEmpty() ? fc : de.getCount() + fc);
@@ -230,9 +229,9 @@ public final class BurstTakes {
                     if (empty == -1 || realIds.get(empty) == -1) break;
                     Integer emptyReal = realIds.get(empty);
                     if (empty < 9) {
-                        plan.clicks.add(new BurstClick(hbRealId, empty, SlotActionType.SWAP));
+                        plan.clicks.add(new BurstClick(hbRealId, empty, ClickType.SWAP));
                     } else {
-                        plan.clicks.add(new BurstClick(emptyReal, hotbarIndex, SlotActionType.SWAP));
+                        plan.clicks.add(new BurstClick(emptyReal, hotbarIndex, ClickType.SWAP));
                     }
                     sim.put(empty, oldHb.copy());
                     sim.put(hotbarIndex, ItemStack.EMPTY);
@@ -252,14 +251,14 @@ public final class BurstTakes {
         }
     }
 
-    public static void fire(MinecraftClient client, ScreenHandler handler, BurstPlan plan, int hotbarIndex) {
-        if (client == null || client.interactionManager == null || plan == null) return;
+    public static void fire(Minecraft client, AbstractContainerMenu handler, BurstPlan plan, int hotbarIndex) {
+        if (client == null || client.gameMode == null || plan == null) return;
         for (BurstClick c : plan.clicks) {
-            client.interactionManager.clickSlot(handler.syncId, c.slotId(), c.button(), c.action(), client.player);
+            client.gameMode.handleInventoryMouseClick(handler.containerId, c.slotId(), c.button(), c.action(), client.player);
         }
-        PlayerInventory inv = client.player.getInventory();
+        Inventory inv = client.player.getInventory();
         for (Map.Entry<Integer, ItemStack> e : plan.predicted.entrySet()) {
-            inv.setStack(e.getKey(), e.getValue().copy());
+            inv.setItem(e.getKey(), e.getValue().copy());
         }
         BHSDebug.log("BURST crafts=" + plan.crafts + " packets=" + plan.clicks.size() + " -> hb" + (hotbarIndex + 1));
     }
@@ -301,17 +300,17 @@ public final class BurstTakes {
     // Runtime girdi-gruplama: odak output slotunun envanteri dışındaki,
     // oyuncu-dışı container slotları = girdiler (handler id listesi).
     // Paylaşımlı envanterde (fırın: girdi+output aynı) BOŞ liste döner.
-    public static List<Integer> inputSlotIds(ScreenHandler handler, Slot outputSlot, PlayerInventory inv) {
+    public static List<Integer> inputSlotIds(AbstractContainerMenu handler, Slot outputSlot, Inventory inv) {
         List<Integer> ids = new ArrayList<>();
         try {
-            if (handler == null || outputSlot == null || outputSlot.inventory == null || inv == null) return ids;
-            Object outInv = outputSlot.inventory;
+            if (handler == null || outputSlot == null || outputSlot.container == null || inv == null) return ids;
+            Object outInv = outputSlot.container;
             if (outInv == inv) return ids;
             for (Slot s : handler.slots) {
-                if (s == null || s.inventory == null) continue;
+                if (s == null || s.container == null) continue;
                 if (s == outputSlot) continue;
-                if (s.inventory == inv || s.inventory == outInv) continue;
-                ids.add(s.id);
+                if (s.container == inv || s.container == outInv) continue;
+                ids.add(s.index);
             }
         } catch (Exception ignored) {
         }
@@ -325,13 +324,13 @@ public final class BurstTakes {
                 if (cand < 0 || cand > 8 || cand == target) continue;
                 ItemStack s = sim.get(cand);
                 if (!isSame(s, anchor)) continue;
-                if (s.getCount() + need <= s.getMaxCount()) return cand;
+                if (s.getCount() + need <= s.getMaxStackSize()) return cand;
             }
         }
         for (int i = 9; i < 36; i++) {
             ItemStack s = sim.get(i);
             if (!isSame(s, anchor)) continue;
-            if (s.getCount() + need <= s.getMaxCount()) return i;
+            if (s.getCount() + need <= s.getMaxStackSize()) return i;
         }
         int best = -1;
         int bestDist = Integer.MAX_VALUE;
@@ -371,6 +370,6 @@ public final class BurstTakes {
     private static boolean isSame(ItemStack a, ItemStack b) {
         if (a == null || b == null || a.isEmpty() || b.isEmpty()) return false;
         if (a.getItem() != b.getItem()) return false;
-        return ItemStack.areItemsAndComponentsEqual(a, b);
+        return ItemStack.isSameItemSameComponents(a, b);
     }
 }

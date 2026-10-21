@@ -2,17 +2,16 @@ package com.betterhotbarswap.client.toolbar;
 
 import com.betterhotbarswap.BetterHotbarSwap;
 import com.mojang.datafixers.DataFixer;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.datafixer.DataFixTypes;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.nbt.NbtHelper;
+import net.minecraft.client.Minecraft;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.core.NonNullList;
+import net.minecraft.data.registries.VanillaRegistries;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtIo;
-import net.minecraft.nbt.NbtList;
-import net.minecraft.registry.BuiltinRegistries;
-import net.minecraft.registry.RegistryWrapper;
-import net.minecraft.util.collection.DefaultedList;
-
+import net.minecraft.nbt.NbtUtils;
+import net.minecraft.util.datafix.DataFixTypes;
+import net.minecraft.world.item.ItemStack;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
@@ -31,17 +30,17 @@ public final class ToolbarStorage {
     private final Path file; // 1.20.3+: NbtIo File yerine Path alır (vanilla HotbarStorage da öyle)
     private final DataFixer fixer;
     @SuppressWarnings("unchecked")
-    private final DefaultedList<ItemStack>[] bars = new DefaultedList[9];
+    private final NonNullList<ItemStack>[] bars = new NonNullList[9];
     // Okunamayan eşyanın ham NBT'si (ör. menüde bilinmeyen mod içeriği): slot boş
     // kalırsa kayıtta AYNEN geri yazılır, dosyadan eşya silinmez.
-    private final NbtCompound[][] undecoded = new NbtCompound[9][SIZE];
-    private RegistryWrapper.WrapperLookup loadedWith;
-    private static RegistryWrapper.WrapperLookup menuLookup;
+    private final CompoundTag[][] undecoded = new CompoundTag[9][SIZE];
+    private HolderLookup.Provider loadedWith;
+    private static HolderLookup.Provider menuLookup;
 
     public ToolbarStorage(Path file, DataFixer fixer) {
         this.file = file;
         this.fixer = fixer;
-        for (int i = 0; i < 9; i++) bars[i] = DefaultedList.ofSize(SIZE, ItemStack.EMPTY);
+        for (int i = 0; i < 9; i++) bars[i] = NonNullList.withSize(SIZE, ItemStack.EMPTY);
     }
 
     public List<ItemStack> get(int index) {
@@ -56,15 +55,15 @@ public final class ToolbarStorage {
 
     // 1.20.5+: eşya NBT'si kayıt (registry) bağlamıyla okunur/yazılır. Dünyadayken
     // dünyanınki, menüde vanilla'nın gömülü kayıtları; bağlam değişince yeniden okunur.
-    private static RegistryWrapper.WrapperLookup lookup() {
-        MinecraftClient client = MinecraftClient.getInstance();
-        if (client.world != null) return client.world.getRegistryManager();
-        if (menuLookup == null) menuLookup = BuiltinRegistries.createWrapperLookup();
+    private static HolderLookup.Provider lookup() {
+        Minecraft client = Minecraft.getInstance();
+        if (client.level != null) return client.level.registryAccess();
+        if (menuLookup == null) menuLookup = VanillaRegistries.createLookup();
         return menuLookup;
     }
 
     private void load() {
-        RegistryWrapper.WrapperLookup lookup = lookup();
+        HolderLookup.Provider lookup = lookup();
         loadedWith = lookup;
         for (int i = 0; i < 9; i++) {
             Collections.fill(bars[i], ItemStack.EMPTY);
@@ -72,14 +71,14 @@ public final class ToolbarStorage {
         }
         try {
             if (!Files.exists(file)) return;
-            NbtCompound nbt = NbtIo.read(file);
+            CompoundTag nbt = NbtIo.read(file);
             if (nbt == null) return;
-            nbt = DataFixTypes.HOTBAR.update(fixer, nbt, NbtHelper.getDataVersion(nbt, 1343));
+            nbt = DataFixTypes.HOTBAR.updateToCurrentVersion(fixer, nbt, NbtUtils.getDataVersion(nbt, 1343));
             for (int i = 0; i < 9; i++) {
-                NbtList list = nbt.getList(String.valueOf(i), NbtCompound.COMPOUND_TYPE);
+                ListTag list = nbt.getList(String.valueOf(i), CompoundTag.TAG_COMPOUND);
                 for (int j = 0; j < Math.min(list.size(), SIZE); j++) {
-                    NbtCompound c = list.getCompound(j);
-                    ItemStack s = ItemStack.fromNbtOrEmpty(lookup, c);
+                    CompoundTag c = list.getCompound(j);
+                    ItemStack s = ItemStack.parseOptional(lookup, c);
                     bars[i].set(j, s);
                     if (s.isEmpty() && c.contains("id") && !"minecraft:air".equals(c.getString("id"))) undecoded[i][j] = c;
                 }
@@ -92,13 +91,13 @@ public final class ToolbarStorage {
     // Çağıran her zaman önce get() ile aynı bağlamda yüklemiştir.
     public void save() {
         try {
-            RegistryWrapper.WrapperLookup lookup = lookup();
-            NbtCompound root = NbtHelper.putDataVersion(new NbtCompound());
+            HolderLookup.Provider lookup = lookup();
+            CompoundTag root = NbtUtils.addCurrentDataVersion(new CompoundTag());
             for (int i = 0; i < 9; i++) {
-                NbtList list = new NbtList();
+                ListTag list = new ListTag();
                 for (int j = 0; j < SIZE; j++) {
                     ItemStack s = bars[i].get(j);
-                    list.add(s.isEmpty() && undecoded[i][j] != null ? undecoded[i][j] : s.encodeAllowEmpty(lookup));
+                    list.add(s.isEmpty() && undecoded[i][j] != null ? undecoded[i][j] : s.saveOptional(lookup));
                 }
                 root.put(String.valueOf(i), list);
             }

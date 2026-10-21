@@ -1,16 +1,16 @@
 package com.betterhotbarswap.config;
 
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.Element;
-import net.minecraft.client.gui.screen.option.ControlsListWidget;
-import net.minecraft.client.option.KeyBinding;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.option.KeybindsScreen;
-import net.minecraft.client.gui.tooltip.Tooltip;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.screen.ScreenTexts;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
+import net.minecraft.ChatFormatting;
+import net.minecraft.client.KeyMapping;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.Tooltip;
+import net.minecraft.client.gui.components.events.GuiEventListener;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.options.controls.KeyBindsList;
+import net.minecraft.client.gui.screens.options.controls.KeyBindsScreen;
+import net.minecraft.network.chat.CommonComponents;
+import net.minecraft.network.chat.Component;
 
 // Sade vanilla Seçenekler düzeni: iki sütun "Ad: AÇIK/KAPALI" düğmeleri,
 // açıklama fare üstündeyken ipucu balonunda. Altta araç çubukları + tuşlar.
@@ -18,7 +18,7 @@ public final class BHSConfigScreen extends Screen {
     private final Screen parent;
 
     public BHSConfigScreen(Screen parent) {
-        super(Text.translatable("betterhotbarswap.settings.title"));
+        super(Component.translatable("betterhotbarswap.settings.title"));
         this.parent = parent;
     }
 
@@ -30,12 +30,12 @@ public final class BHSConfigScreen extends Screen {
         toggle(0, y + 24, "tidy_collect", BHSConfig.tidyCollect, v -> BHSConfig.tidyCollect = v);
         toggle(1, y + 24, "survival_toolbars", BHSConfig.survivalToolbars, v -> BHSConfig.survivalToolbars = v);
         toggle(0, y + 48, "debug", BHSConfig.debugEnabled, v -> BHSConfig.debugEnabled = v);
-        addDrawableChild(ButtonWidget.builder(Text.translatable("betterhotbarswap.settings.toolbars"),
-            b -> client.setScreen(new BHSToolbarScreen(this))).dimensions(colX(0), y + 84, 150, 20).build());
-        addDrawableChild(ButtonWidget.builder(Text.translatable("betterhotbarswap.settings.keys"),
-            b -> client.setScreen(keybindsAtOurCategory())).dimensions(colX(1), y + 84, 150, 20).build());
-        addDrawableChild(ButtonWidget.builder(ScreenTexts.DONE, b -> close())
-            .dimensions(width / 2 - 100, y + 120, 200, 20).build());
+        addRenderableWidget(Button.builder(Component.translatable("betterhotbarswap.settings.toolbars"),
+            b -> minecraft.setScreen(new BHSToolbarScreen(this))).bounds(colX(0), y + 84, 150, 20).build());
+        addRenderableWidget(Button.builder(Component.translatable("betterhotbarswap.settings.keys"),
+            b -> minecraft.setScreen(keybindsAtOurCategory())).bounds(colX(1), y + 84, 150, 20).build());
+        addRenderableWidget(Button.builder(CommonComponents.GUI_DONE, b -> onClose())
+            .bounds(width / 2 - 100, y + 120, 200, 20).build());
     }
 
     // Vanilla Kontroller ekranı, BetterHotbarSwap bölümüne kaydırılmış açılır.
@@ -43,15 +43,15 @@ public final class BHSConfigScreen extends Screen {
     // satır yüksekliği 20 (javap: ControlsListWidget). Aynı sıra burada sayılır.
     // Başka bir mod listeyi değiştirdiyse (ör. Controlling) kaydırma sessizce atlanır.
     private Screen keybindsAtOurCategory() {
-        return new KeybindsScreen(this, client.options) {
+        return new KeyBindsScreen(this, minecraft.options) {
             @Override
             protected void init() {
                 super.init();
-                KeyBinding[] keys = client.options.allKeys.clone();
+                KeyMapping[] keys = minecraft.options.keyMappings.clone();
                 java.util.Arrays.sort(keys);
                 int row = 0;
                 String last = null;
-                for (KeyBinding k : keys) {
+                for (KeyMapping k : keys) {
                     if (!k.getCategory().equals(last)) {
                         last = k.getCategory();
                         if (last.equals("category.betterhotbarswap")) break;
@@ -59,8 +59,8 @@ public final class BHSConfigScreen extends Screen {
                     }
                     row++;
                 }
-                for (Element e : children()) {
-                    if (e instanceof ControlsListWidget list) list.setScrollAmount(row * 20);
+                for (GuiEventListener e : children()) {
+                    if (e instanceof KeyBindsList list) list.setScrollAmount(row * 20);
                 }
             }
         };
@@ -71,35 +71,35 @@ public final class BHSConfigScreen extends Screen {
     }
 
     private void toggle(int col, int y, String key, boolean initial, Toggle setter) {
-        Text name = Text.translatable("betterhotbarswap.settings." + key);
+        Component name = Component.translatable("betterhotbarswap.settings." + key);
         boolean[] state = {initial};
-        addDrawableChild(ButtonWidget.builder(toggleText(name, initial), b -> {
+        addRenderableWidget(Button.builder(toggleText(name, initial), b -> {
             state[0] = !state[0];
             setter.set(state[0]);
             b.setMessage(toggleText(name, state[0]));
             BHSConfig.save();
-        }).dimensions(colX(col), y, 150, 20)
-            .tooltip(Tooltip.of(Text.translatable("betterhotbarswap.settings." + key + ".desc")))
+        }).bounds(colX(col), y, 150, 20)
+            .tooltip(Tooltip.create(Component.translatable("betterhotbarswap.settings." + key + ".desc")))
             .build());
     }
 
     // Vanilla "Ad: AÇIK/KAPALI" biçimi (oyun dilinde), durum kısmı renkli.
-    private static Text toggleText(Text name, boolean on) {
-        return ScreenTexts.composeGenericOptionText(name,
-            (on ? ScreenTexts.ON : ScreenTexts.OFF).copy().formatted(on ? Formatting.GREEN : Formatting.RED));
+    private static Component toggleText(Component name, boolean on) {
+        return CommonComponents.optionNameValue(name,
+            (on ? CommonComponents.OPTION_ON : CommonComponents.OPTION_OFF).copy().withStyle(on ? ChatFormatting.GREEN : ChatFormatting.RED));
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
         super.render(context, mouseX, mouseY, delta); // 1.20.2+: Screen.render arka plan + düğmeleri çizer; içerik üstüne
-        context.drawCenteredTextWithShadow(textRenderer, title, width / 2, 15, 0xFFFFFF);
+        context.drawCenteredString(font, title, width / 2, 15, 0xFFFFFF);
     }
 
     @Override
-    public void close() {
+    public void onClose() {
         BHSConfig.save();
-        if (client != null) {
-            client.setScreen(parent);
+        if (minecraft != null) {
+            minecraft.setScreen(parent);
         }
     }
 

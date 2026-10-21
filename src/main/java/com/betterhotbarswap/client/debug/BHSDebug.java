@@ -2,14 +2,13 @@ package com.betterhotbarswap.client.debug;
 
 import com.betterhotbarswap.BetterHotbarSwap;
 import com.betterhotbarswap.config.BHSConfig;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.screen.slot.Slot;
-import net.minecraft.text.Text;
-
 import java.util.ArrayDeque;
 import java.util.Deque;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.Slot;
 
 /**
  * Eylemsel debug: klavye + slot + click akışının son olaylarını hem ekranda
@@ -42,51 +41,51 @@ public final class BHSDebug {
             return;
         }
         try {
-            String stackName = focusedSlot.getStack().isEmpty() ? "Empty" : focusedSlot.getStack().getName().getString();
-            lastInfo = String.format("SlotId:%d | %s", focusedSlot.id, stackName);
+            String stackName = focusedSlot.getItem().isEmpty() ? "Empty" : focusedSlot.getItem().getHoverName().getString();
+            lastInfo = String.format("SlotId:%d | %s", focusedSlot.index, stackName);
         } catch (Exception e) {
-            lastInfo = "SlotId:" + focusedSlot.id;
+            lastInfo = "SlotId:" + focusedSlot.index;
         }
         lastHotbar = hotbarIndex;
     }
 
-    public static String describeSlot(Slot slot, PlayerEntity player) {
+    public static String describeSlot(Slot slot, Player player) {
         if (slot == null) {
             return "null";
         }
         String stack;
         try {
-            stack = slot.getStack().isEmpty()
+            stack = slot.getItem().isEmpty()
                 ? "empty"
-                : slot.getStack().getName().getString() + "x" + slot.getStack().getCount();
+                : slot.getItem().getHoverName().getString() + "x" + slot.getItem().getCount();
         } catch (Exception e) {
             stack = "?";
         }
         String inv;
-        if (player != null && slot.inventory == player.getInventory()) {
-            inv = "player idx=" + slot.getIndex();
-        } else if (slot.inventory == null) {
+        if (player != null && slot.container == player.getInventory()) {
+            inv = "player idx=" + slot.getContainerSlot();
+        } else if (slot.container == null) {
             inv = "no-inv";
         } else {
-            inv = slot.inventory.getClass().getSimpleName() + " idx=" + slot.getIndex();
+            inv = slot.container.getClass().getSimpleName() + " idx=" + slot.getContainerSlot();
         }
         boolean take = false;
         try {
-            take = player != null && slot.canTakeItems(player);
+            take = player != null && slot.mayPickup(player);
         } catch (Exception ignored) {
         }
-        return "id=" + slot.id + " [" + inv + "] " + stack + " take=" + take;
+        return "id=" + slot.index + " [" + inv + "] " + stack + " take=" + take;
     }
 
-    public static void render(DrawContext context) {
-        var client = MinecraftClient.getInstance();
+    public static void render(GuiGraphics context) {
+        var client = Minecraft.getInstance();
         if (client == null || client.player == null) return;
         if (!BHSConfig.debugEnabled) return;
         int y = 5;
-        context.drawTextWithShadow(client.textRenderer, Text.literal("[BHS] " + lastInfo + " | Hotbar:" + lastHotbar), 5, y, 0x00FF00);
+        context.drawString(client.font, Component.literal("[BHS] " + lastInfo + " | Hotbar:" + lastHotbar), 5, y, 0x00FF00);
         y += 12;
         for (String line : LINES) {
-            context.drawTextWithShadow(client.textRenderer, Text.literal(line), 5, y, 0xFFFF00);
+            context.drawString(client.font, Component.literal(line), 5, y, 0xFFFF00);
             y += 10;
         }
     }

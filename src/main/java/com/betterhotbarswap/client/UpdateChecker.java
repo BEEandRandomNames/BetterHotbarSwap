@@ -8,9 +8,8 @@ import com.google.gson.JsonParser;
 import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.loader.api.SemanticVersion;
 import net.fabricmc.loader.api.VersionParsingException;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.TitleScreen;
-
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.TitleScreen;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
@@ -59,10 +58,10 @@ public final class UpdateChecker {
     }
 
     // Ana menü görününce (istek geç dönerse de) bir kez sorar.
-    public static void onTick(MinecraftClient client) {
-        if (shown || newVersion == null || !(client.currentScreen instanceof TitleScreen)) return;
+    public static void onTick(Minecraft client) {
+        if (shown || newVersion == null || !(client.screen instanceof TitleScreen)) return;
         shown = true;
-        client.setScreen(new BHSUpdateScreen(client.currentScreen, newVersion, pageUrl()));
+        client.setScreen(new BHSUpdateScreen(client.screen, newVersion, pageUrl()));
     }
 
     // Yanıttaki en yüksek mod sürümü yüklüden büyükse onu döner, değilse null.

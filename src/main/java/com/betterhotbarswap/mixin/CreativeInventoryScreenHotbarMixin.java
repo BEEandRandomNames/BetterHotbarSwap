@@ -4,19 +4,6 @@ import com.betterhotbarswap.BetterHotbarSwap;
 import com.betterhotbarswap.client.debug.BHSDebug;
 import com.betterhotbarswap.client.input.HotbarInputController;
 import com.betterhotbarswap.client.input.VanillaClickExecutor;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.ingame.CreativeInventoryScreen;
-import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.inventory.SimpleInventory;
-import net.minecraft.item.ItemGroup;
-import net.minecraft.item.ItemGroups;
-import net.minecraft.item.ItemStack;
-import net.minecraft.network.packet.c2s.play.UpdateSelectedSlotC2SPacket;
-import net.minecraft.registry.Registries;
-import net.minecraft.screen.ScreenHandler;
-import net.minecraft.screen.slot.Slot;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -26,14 +13,25 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.protocol.game.ServerboundSetCarriedItemPacket;
+import net.minecraft.world.SimpleContainer;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.CreativeModeTab;
+import net.minecraft.world.item.CreativeModeTabs;
+import net.minecraft.world.item.ItemStack;
 
-@Mixin(CreativeInventoryScreen.class)
+@Mixin(CreativeModeInventoryScreen.class)
 public class CreativeInventoryScreenHotbarMixin {
     private static int creativeActionSeq = 0;
     // 1.20.1'de static alan (bug #2 dersi: instance shadow crash verir).
-    @Shadow private static ItemGroup selectedTab;
-    private int findFirstEmptyMain(PlayerInventory inv) {
-        for (int i = 9; i <= 35; i++) if (inv.getStack(i).isEmpty()) return i;
+    @Shadow private static CreativeModeTab selectedTab;
+    private int findFirstEmptyMain(Inventory inv) {
+        for (int i = 9; i <= 35; i++) if (inv.getItem(i).isEmpty()) return i;
         return -1;
     }
     // Sunucu CreativeInventoryAction paketlerindeki slot id'yi survival-layout
@@ -47,28 +45,28 @@ public class CreativeInventoryScreenHotbarMixin {
         return -1;
     }
     // Tüm envanterin kompakt fotoğrafı (sadece dolu slotlar). latest.log'a [BHS-INV] ile düşer.
-    private static String snapshot(PlayerInventory inv) {
+    private static String snapshot(Inventory inv) {
         StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < inv.main.size(); i++) {
-            ItemStack s = inv.main.get(i);
+        for (int i = 0; i < inv.items.size(); i++) {
+            ItemStack s = inv.items.get(i);
             if (!s.isEmpty()) sb.append(i).append('=').append(shortStack(s)).append(';');
         }
         for (int i = 0; i < inv.armor.size(); i++) {
             ItemStack s = inv.armor.get(i);
             if (!s.isEmpty()) sb.append('a').append(i).append('=').append(shortStack(s)).append(';');
         }
-        for (int i = 0; i < inv.offHand.size(); i++) {
-            ItemStack s = inv.offHand.get(i);
+        for (int i = 0; i < inv.offhand.size(); i++) {
+            ItemStack s = inv.offhand.get(i);
             if (!s.isEmpty()) sb.append("off=").append(shortStack(s)).append(';');
         }
         return sb.length() == 0 ? "empty" : sb.toString();
     }
     // Hotbar Önceliği: basılan slot hariç, basılana en yakın boş hotbar slotu. Eşitlikte küçük index kazanır.
-    private int findNearestEmptyHotbar(PlayerInventory inv, int pressedIndex) {
+    private int findNearestEmptyHotbar(Inventory inv, int pressedIndex) {
         int best = -1;
         int bestDist = Integer.MAX_VALUE;
         for (int i = 0; i < 9; i++) {
-            if (i == pressedIndex || !inv.getStack(i).isEmpty()) continue;
+            if (i == pressedIndex || !inv.getItem(i).isEmpty()) continue;
             int dist = Math.abs(i - pressedIndex);
             if (dist < bestDist) {
                 bestDist = dist;
@@ -81,7 +79,7 @@ public class CreativeInventoryScreenHotbarMixin {
     private static boolean isSameStackable(ItemStack a, ItemStack b) {
         if (a.isEmpty() || b.isEmpty()) return false;
         if (a.getItem() != b.getItem()) return false;
-        return ItemStack.areItemsAndComponentsEqual(a, b);
+        return ItemStack.isSameItemSameComponents(a, b);
     }
     // Stack sırası: SADECE hotbar, basılana yakınlık (basılan hariç). Envanter
     // ancak hotbar'da hiç yer yoksa denenir (kural 2026-10-21: hotbar'da kalır).
@@ -94,21 +92,21 @@ public class CreativeInventoryScreenHotbarMixin {
         return order;
     }
     // Kısmi aynı yığına ekle (mutlak tahmin + paket). Dönüş: taşınan miktar.
-    private static int mergeInto(MinecraftClient client, PlayerInventory inv, int idx, ItemStack old, int remaining, StringBuilder moves) {
-        ItemStack s = inv.getStack(idx);
-        if (!isSameStackable(s, old) || s.getCount() >= s.getMaxCount()) return 0;
-        int move = Math.min(remaining, s.getMaxCount() - s.getCount());
+    private static int mergeInto(Minecraft client, Inventory inv, int idx, ItemStack old, int remaining, StringBuilder moves) {
+        ItemStack s = inv.getItem(idx);
+        if (!isSameStackable(s, old) || s.getCount() >= s.getMaxStackSize()) return 0;
+        int move = Math.min(remaining, s.getMaxStackSize() - s.getCount());
         ItemStack updated = s.copy();
         updated.setCount(s.getCount() + move);
-        inv.setStack(idx, updated);
-        client.interactionManager.clickCreativeStack(updated, survivalSlotId(idx));
+        inv.setItem(idx, updated);
+        client.gameMode.handleCreativeModeItemAdd(updated, survivalSlotId(idx));
         moves.append(" +").append(move).append("->").append(idx < 9 ? "hb" + (idx + 1) : "m" + idx);
         return move;
     }
     // Arama sekmesi mi? (Kabul edilen sınır: harfler orada yazıya aittir, bug #13.)
     private static boolean isSearchTab() {
         try {
-            return Registries.ITEM_GROUP.getKey(selectedTab).map(k -> k.equals(ItemGroups.SEARCH)).orElse(false);
+            return BuiltInRegistries.CREATIVE_MODE_TAB.getResourceKey(selectedTab).map(k -> k.equals(CreativeModeTabs.SEARCH)).orElse(false);
         } catch (Exception e) {
             return false;
         }
@@ -118,15 +116,15 @@ public class CreativeInventoryScreenHotbarMixin {
     }
     // Eşya Sil (X) kutusu: envanter sekmesindeki SimpleInventory slot (liste sekmelerindeki
     // liste slotlarıyla karışmaması için güvenilmez-id şartı var).
-    private static boolean isTrashSlot(ScreenHandler handler, Slot slot) {
-        return slot.inventory instanceof SimpleInventory
-            && slot.getIndex() == 0
+    private static boolean isTrashSlot(AbstractContainerMenu handler, Slot slot) {
+        return slot.container instanceof SimpleContainer
+            && slot.getContainerSlot() == 0
             && !VanillaClickExecutor.idsTrustworthy(handler);
     }
     @Inject(method = "keyPressed", at = @At("HEAD"), cancellable = true)
     private void betterhotbarswap$keyPressed(int keyCode, int scanCode, int modifiers, CallbackInfoReturnable<Boolean> cir) {
-        MinecraftClient client = MinecraftClient.getInstance();
-        if (client.player == null || client.interactionManager == null) return;
+        Minecraft client = Minecraft.getInstance();
+        if (client.player == null || client.gameMode == null) return;
         // Oyuncunun gerçek bağları (V/R gibi remap'ler dahil, bug #13).
         int hotbarIndex = HotbarInputController.hotbarIndex(client, keyCode, scanCode);
         if (hotbarIndex < 0 || hotbarIndex > 8) return;
@@ -136,24 +134,24 @@ public class CreativeInventoryScreenHotbarMixin {
             if (com.betterhotbarswap.config.BHSConfig.tidyCollect) cir.setReturnValue(true);
             return;
         }
-        CreativeInventoryScreen screen = (CreativeInventoryScreen)(Object)this;
+        CreativeModeInventoryScreen screen = (CreativeModeInventoryScreen)(Object)this;
         int prevSelMixed = -1;
-        try { prevSelMixed = client.player.getInventory().selectedSlot; } catch (Exception ignored) {}
+        try { prevSelMixed = client.player.getInventory().selected; } catch (Exception ignored) {}
         Slot focusedSlot = ((HandledScreenAccessor) screen).betterhotbarswap$getFocusedSlot();
         BHSDebug.update(focusedSlot, hotbarIndex);
         if (focusedSlot == null) {
             BHSDebug.log("PASS creative key=" + keyCode + " reason=no-item-slot (vanilla yazar)");
             return;
         }
-        PlayerInventory playerInv = client.player.getInventory();
-        ScreenHandler handler = screen.getScreenHandler();
+        Inventory playerInv = client.player.getInventory();
+        AbstractContainerMenu handler = screen.getMenu();
         // Eşya Sil (X) kutusu + kısayol: hotbar'daki eşyayı sil (F5).
         // NOT: X kutusu hep BOŞTUR, o yüzden hasStack kontrolünden ÖNCE bakılır.
         if (isTrashSlot(handler, focusedSlot)) {
-            ItemStack condemned = playerInv.getStack(hotbarIndex).copy();
+            ItemStack condemned = playerInv.getItem(hotbarIndex).copy();
             if (!condemned.isEmpty()) {
-                playerInv.setStack(hotbarIndex, ItemStack.EMPTY);
-                client.interactionManager.clickCreativeStack(ItemStack.EMPTY, survivalSlotId(hotbarIndex));
+                playerInv.setItem(hotbarIndex, ItemStack.EMPTY);
+                client.gameMode.handleCreativeModeItemAdd(ItemStack.EMPTY, survivalSlotId(hotbarIndex));
                 BHSDebug.log("DELETE hb" + (hotbarIndex + 1) + " " + shortStack(condemned));
             } else {
                 BHSDebug.log("DELETE hb" + (hotbarIndex + 1) + " (zaten boş)");
@@ -164,7 +162,7 @@ public class CreativeInventoryScreenHotbarMixin {
             return;
         }
         // Slot boşsa (ör. arama kutusu üstünde) tuş vanilla'ya gider: arama yazmaya devam eder.
-        if (!focusedSlot.hasStack()) {
+        if (!focusedSlot.hasItem()) {
             BHSDebug.log("PASS creative key=" + keyCode + " reason=no-item-slot (vanilla yazar)");
             return;
         }
@@ -175,17 +173,17 @@ public class CreativeInventoryScreenHotbarMixin {
         // (sekme değiştirme vb.) çalışsın diye dokunulmaz.
         // Bug #31: zirh/offhand kaynagi vanilla'ya birak (dupe vektoru).
         try {
-            if (focusedSlot.inventory instanceof PlayerInventory) {
-                int fIdx = focusedSlot.getIndex();
+            if (focusedSlot.container instanceof Inventory) {
+                int fIdx = focusedSlot.getContainerSlot();
                 if (fIdx >= 36 && fIdx <= 40) {
                     BHSDebug.log("VANILLA zirh/offhand kaynagi idx=" + fIdx + " (vanilla yapsin)");
                     return;
                 }
             }
         } catch (Exception ignored) {}
-        if (focusedSlot.inventory instanceof PlayerInventory) {
-            if (!VanillaClickExecutor.idsTrustworthy(screen.getScreenHandler())) {
-                boolean ok = VanillaClickExecutor.assignSlotToHotbar(screen.getScreenHandler(), focusedSlot, hotbarIndex, false);
+        if (focusedSlot.container instanceof Inventory) {
+            if (!VanillaClickExecutor.idsTrustworthy(screen.getMenu())) {
+                boolean ok = VanillaClickExecutor.assignSlotToHotbar(screen.getMenu(), focusedSlot, hotbarIndex, false);
                 HotbarInputController.restoreSelectionIfChanged(client, prevSelMixed);
                 if (ok) {
                     HotbarInputController.markPressed(keyCode);
@@ -199,14 +197,14 @@ public class CreativeInventoryScreenHotbarMixin {
             }
             return;
         }
-        BHSDebug.log("CTX " + handler.getClass().getSimpleName() + " sync=" + handler.syncId
-            + " slots=" + handler.slots.size() + " current=" + (handler == client.player.currentScreenHandler));
+        BHSDebug.log("CTX " + handler.getClass().getSimpleName() + " sync=" + handler.containerId
+            + " slots=" + handler.slots.size() + " current=" + (handler == client.player.containerMenu));
         if (com.betterhotbarswap.config.BHSConfig.debugEnabled) BetterHotbarSwap.LOGGER.info("[BHS-INV] BEFORE {}", snapshot(playerInv));
-        ItemStack newStack = focusedSlot.getStack().copy();
+        ItemStack newStack = focusedSlot.getItem().copy();
         if (newStack.isEmpty()) return;
         // Creative liste stack'i 1'li görünür; hotbar'a tam deste ver.
-        newStack.setCount(newStack.getMaxCount());
-        ItemStack oldHotbarStack = playerInv.getStack(hotbarIndex).copy();
+        newStack.setCount(newStack.getMaxStackSize());
+        ItemStack oldHotbarStack = playerInv.getItem(hotbarIndex).copy();
         int hotbarSurvivalId = survivalSlotId(hotbarIndex);
         if (hotbarSurvivalId == -1) {
             BHSDebug.log("CREATIVE list->hotbar" + (hotbarIndex + 1) + " IPTAL bad-index " + BHSDebug.describeSlot(focusedSlot, client.player));
@@ -215,8 +213,8 @@ public class CreativeInventoryScreenHotbarMixin {
         }
         String what = BHSDebug.describeSlot(focusedSlot, client.player);
         if (oldHotbarStack.isEmpty()) {
-            playerInv.setStack(hotbarIndex, newStack);
-            client.interactionManager.clickCreativeStack(newStack, hotbarSurvivalId);
+            playerInv.setItem(hotbarIndex, newStack);
+            client.gameMode.handleCreativeModeItemAdd(newStack, hotbarSurvivalId);
             BHSDebug.log("CREATIVE " + what + " -> hotbar" + (hotbarIndex + 1) + " x" + newStack.getCount() + " (bos sid=" + hotbarSurvivalId + ")" + hands(client));
         } else {
             // Verimlilik zinciri (F2) - sıra önemli, paketler aynı tick'te sırayla gider:
@@ -241,8 +239,8 @@ public class CreativeInventoryScreenHotbarMixin {
                 if (overflowInvIndex != -1 && remaining > 0) {
                     ItemStack rest = oldHotbarStack.copy();
                     rest.setCount(remaining);
-                    playerInv.setStack(overflowInvIndex, rest);
-                    client.interactionManager.clickCreativeStack(rest, survivalSlotId(overflowInvIndex));
+                    playerInv.setItem(overflowInvIndex, rest);
+                    client.gameMode.handleCreativeModeItemAdd(rest, survivalSlotId(overflowInvIndex));
                     overflowWhere = overflowInvIndex < 9 ? "hb" + (overflowInvIndex + 1) : "m" + overflowInvIndex;
                     remaining = 0;
                 }
@@ -252,14 +250,14 @@ public class CreativeInventoryScreenHotbarMixin {
             // Drop BAŞARISIZ olursa eski korunur (sessiz silme YOK).
             boolean dropped = false;
             if (remaining > 0) {
-                int prevSel = playerInv.selectedSlot;
+                int prevSel = playerInv.selected;
                 try {
-                    playerInv.selectedSlot = hotbarIndex;
-                    client.player.networkHandler.sendPacket(new UpdateSelectedSlotC2SPacket(hotbarIndex));
-                    dropped = client.player.dropSelectedItem(true);
+                    playerInv.selected = hotbarIndex;
+                    client.player.connection.send(new ServerboundSetCarriedItemPacket(hotbarIndex));
+                    dropped = client.player.drop(true);
                 } finally {
-                    playerInv.selectedSlot = prevSel;
-                    try { client.player.networkHandler.sendPacket(new UpdateSelectedSlotC2SPacket(prevSel)); } catch (Exception ignored) {}
+                    playerInv.selected = prevSel;
+                    try { client.player.connection.send(new ServerboundSetCarriedItemPacket(prevSel)); } catch (Exception ignored) {}
                 }
                 if (!dropped) {
                     BHSDebug.log("CREATIVE " + what + " -> hotbar" + (hotbarIndex + 1)
@@ -272,8 +270,8 @@ public class CreativeInventoryScreenHotbarMixin {
                 remaining = 0;
             }
             // 4. yeni her zaman basılan slota
-            playerInv.setStack(hotbarIndex, newStack);
-            client.interactionManager.clickCreativeStack(newStack, hotbarSurvivalId);
+            playerInv.setItem(hotbarIndex, newStack);
+            client.gameMode.handleCreativeModeItemAdd(newStack, hotbarSurvivalId);
             final int finalHotbarIndex = hotbarIndex;
             final ItemStack finalNewStack = newStack;
             final int finalHotbarSurvivalId = hotbarSurvivalId;
@@ -284,9 +282,9 @@ public class CreativeInventoryScreenHotbarMixin {
                     BHSDebug.log("SKIP stale next-tick id=" + actionId);
                     return;
                 }
-                if (client.player == null || client.interactionManager == null) return;
+                if (client.player == null || client.gameMode == null) return;
                 // Ekran değiştiyse yazma (başka sekmene/ekrana taşma olmasın).
-                if (handler != client.player.currentScreenHandler) {
+                if (handler != client.player.containerMenu) {
                     BHSDebug.log("SKIP stale-screen next-tick id=" + actionId);
                     return;
                 }
@@ -294,19 +292,19 @@ public class CreativeInventoryScreenHotbarMixin {
                 // Mouse Tweaks ile hizli giyme ayni tick'e denk gelir; kor resend
                 // hem ayakta hem hotbar'da kopya birakir.
                 try {
-                    ItemStack cur = client.player.getInventory().getStack(finalHotbarIndex);
+                    ItemStack cur = client.player.getInventory().getItem(finalHotbarIndex);
                     if (cur.isEmpty()) {
                         BHSDebug.log("SKIP next-tick moved-away id=" + actionId);
                         return;
                     }
                     if (cur.getItem() != finalNewStack.getItem()
-                        || !ItemStack.areItemsAndComponentsEqual(cur, finalNewStack)) {
+                        || !ItemStack.isSameItemSameComponents(cur, finalNewStack)) {
                         BHSDebug.log("SKIP next-tick replaced id=" + actionId);
                         return;
                     }
                 } catch (Exception ignored) {}
-                client.player.getInventory().setStack(finalHotbarIndex, finalNewStack);
-                client.interactionManager.clickCreativeStack(finalNewStack, finalHotbarSurvivalId);
+                client.player.getInventory().setItem(finalHotbarIndex, finalNewStack);
+                client.gameMode.handleCreativeModeItemAdd(finalNewStack, finalHotbarSurvivalId);
             });
             BHSDebug.log("CREATIVE " + what + " -> hotbar" + (hotbarIndex + 1) + " x" + newStack.getCount()
                 + " (stack:" + (moves.length() == 0 ? "-" : moves)
@@ -324,14 +322,14 @@ public class CreativeInventoryScreenHotbarMixin {
     private void betterhotbarswap$charTyped(char chr, int modifiers, CallbackInfoReturnable<Boolean> cir) {        // GLFW tuş olayından bağımsız karakter olayı da gelir; keyPressed'i iptal etmek
         // aramaya sızmasını engellemez. Item slotu üstündeyken + (rakam VEYA az önce
         // hotkey takası olduysa) gelen karakter = hotkey'dir, yutulur.
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         if (client.player == null) return;
-        CreativeInventoryScreen screen = (CreativeInventoryScreen)(Object)this;
+        CreativeModeInventoryScreen screen = (CreativeModeInventoryScreen)(Object)this;
         int prevSelMixed = -1;
-        try { prevSelMixed = client.player.getInventory().selectedSlot; } catch (Exception ignored) {}
+        try { prevSelMixed = client.player.getInventory().selected; } catch (Exception ignored) {}
         Slot focusedSlot = ((HandledScreenAccessor) screen).betterhotbarswap$getFocusedSlot();
-        boolean onListItem = focusedSlot != null && focusedSlot.hasStack()
-            && !(focusedSlot.inventory instanceof PlayerInventory);
+        boolean onListItem = focusedSlot != null && focusedSlot.hasItem()
+            && !(focusedSlot.container instanceof Inventory);
         if (!onListItem) return;
         boolean isDigit = chr >= '1' && chr <= '9';
         boolean recentSwap = System.nanoTime() - HotbarInputController.lastSwapNanos < 300_000_000L;
@@ -341,9 +339,9 @@ public class CreativeInventoryScreenHotbarMixin {
         }
     }
 
-    private static String hands(MinecraftClient client) {
+    private static String hands(Minecraft client) {
         try {
-            return " el=" + shortStack(client.player.getMainHandStack()) + " off=" + shortStack(client.player.getOffHandStack());
+            return " el=" + shortStack(client.player.getMainHandItem()) + " off=" + shortStack(client.player.getOffhandItem());
         } catch (Exception e) {
             return "";
         }
@@ -352,7 +350,7 @@ public class CreativeInventoryScreenHotbarMixin {
     private static String shortStack(ItemStack stack) {
         if (stack == null || stack.isEmpty()) return "bos";
         try {
-            return stack.getName().getString() + "x" + stack.getCount();
+            return stack.getHoverName().getString() + "x" + stack.getCount();
         } catch (Exception e) {
             return "?";
         }

@@ -1,60 +1,60 @@
 package com.betterhotbarswap.config;
 
-import net.minecraft.client.font.MultilineText;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.screen.ScreenTexts;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Util;
+import net.minecraft.ChatFormatting;
+import net.minecraft.Util;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.MultiLineLabel;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.CommonComponents;
+import net.minecraft.network.chat.Component;
 
 // Güncelleme sorusu (UpdateChecker). Evet = indirme sayfası, Şimdi değil = sonraki
 // açılışta yine sorar, Hayır = bir daha hiç sormaz (config). ESC = Şimdi değil.
 public final class BHSUpdateScreen extends Screen {
     private static final int BTN_W = 100;
     // Özel ad çevrilmez; başlıkta altın sarısı, mesajda düz beyaz (kullanıcı isteği).
-    private static final Text NAME = Text.literal("BetterHotbarSwap").formatted(Formatting.GOLD);
+    private static final Component NAME = Component.literal("BetterHotbarSwap").withStyle(ChatFormatting.GOLD);
 
     private final Screen parent;
     private final String url;
-    private final Text message;
-    private MultilineText lines = MultilineText.EMPTY;
+    private final Component message;
+    private MultiLineLabel lines = MultiLineLabel.EMPTY;
 
     public BHSUpdateScreen(Screen parent, String version, String url) {
-        super(Text.translatable("betterhotbarswap.update.title", NAME));
+        super(Component.translatable("betterhotbarswap.update.title", NAME));
         this.parent = parent;
         this.url = url;
-        this.message = Text.translatable("betterhotbarswap.update.message", NAME.getString(), version);
+        this.message = Component.translatable("betterhotbarswap.update.message", NAME.getString(), version);
     }
 
     @Override
     protected void init() {
-        lines = MultilineText.create(textRenderer, message, width - 50);
-        int y = Math.min(90 + lines.count() * 9 + 20, height - 24);
+        lines = MultiLineLabel.create(font, message, width - 50);
+        int y = Math.min(90 + lines.getLineCount() * 9 + 20, height - 24);
         int x = width / 2 - (BTN_W * 3 + 8) / 2;
-        addDrawableChild(ButtonWidget.builder(ScreenTexts.YES.copy().formatted(Formatting.GREEN), b -> {
-            Util.getOperatingSystem().open(url);
-            close();
-        }).dimensions(x, y, BTN_W, 20).build());
-        addDrawableChild(ButtonWidget.builder(Text.translatable("betterhotbarswap.update.later").formatted(Formatting.YELLOW), b -> close())
-            .dimensions(x + BTN_W + 4, y, BTN_W, 20).build());
-        addDrawableChild(ButtonWidget.builder(ScreenTexts.NO.copy().formatted(Formatting.RED), b -> {
+        addRenderableWidget(Button.builder(CommonComponents.GUI_YES.copy().withStyle(ChatFormatting.GREEN), b -> {
+            Util.getPlatform().openUri(url);
+            onClose();
+        }).bounds(x, y, BTN_W, 20).build());
+        addRenderableWidget(Button.builder(Component.translatable("betterhotbarswap.update.later").withStyle(ChatFormatting.YELLOW), b -> onClose())
+            .bounds(x + BTN_W + 4, y, BTN_W, 20).build());
+        addRenderableWidget(Button.builder(CommonComponents.GUI_NO.copy().withStyle(ChatFormatting.RED), b -> {
             BHSConfig.updateCheck = false;
             BHSConfig.save();
-            close();
-        }).dimensions(x + (BTN_W + 4) * 2, y, BTN_W, 20).build());
+            onClose();
+        }).bounds(x + (BTN_W + 4) * 2, y, BTN_W, 20).build());
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
         super.render(context, mouseX, mouseY, delta); // 1.20.2+: Screen.render arka planı çizer; içerik üstüne
-        context.drawCenteredTextWithShadow(textRenderer, title, width / 2, 70, 0xFFFFFF);
-        lines.drawCenterWithShadow(context, width / 2, 90);
+        context.drawCenteredString(font, title, width / 2, 70, 0xFFFFFF);
+        lines.renderCentered(context, width / 2, 90);
     }
 
     @Override
-    public void close() {
-        if (client != null) client.setScreen(parent);
+    public void onClose() {
+        if (minecraft != null) minecraft.setScreen(parent);
     }
 }

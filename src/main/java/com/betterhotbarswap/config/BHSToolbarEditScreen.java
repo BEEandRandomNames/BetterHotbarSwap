@@ -2,16 +2,15 @@ package com.betterhotbarswap.config;
 
 import com.betterhotbarswap.client.toolbar.SurvivalToolbars;
 import com.betterhotbarswap.client.toolbar.ToolbarStorage;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.item.ItemStack;
-import net.minecraft.screen.ScreenTexts;
-import net.minecraft.text.OrderedText;
-import net.minecraft.text.Text;
-
 import java.util.List;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.CommonComponents;
+import net.minecraft.network.chat.Component;
+import net.minecraft.util.FormattedCharSequence;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.item.ItemStack;
 
 // Kayıtlı düzen düzenleyici (sadece şablon; gerçek envantere DOKUNMAZ, paket yok).
 // Vanilla envanter paneli: envanter 3 sıra + hotbar + solda sol el slotu. Şablonun
@@ -33,10 +32,10 @@ public final class BHSToolbarEditScreen extends Screen {
     private int py;
 
     public BHSToolbarEditScreen(Screen parent, int index) {
-        super(Text.translatable("betterhotbarswap.toolbar.edit_title", index + 1));
+        super(Component.translatable("betterhotbarswap.toolbar.edit_title", index + 1));
         this.parent = parent;
         this.index = index;
-        List<ItemStack> tpl = SurvivalToolbars.storage(net.minecraft.client.MinecraftClient.getInstance()).get(index);
+        List<ItemStack> tpl = SurvivalToolbars.storage(net.minecraft.client.Minecraft.getInstance()).get(index);
         for (int t = 0; t < ToolbarStorage.SIZE; t++) slots[t] = tpl.get(t).copy();
     }
 
@@ -44,17 +43,17 @@ public final class BHSToolbarEditScreen extends Screen {
     protected void init() {
         px = width / 2 - PANEL_W / 2;
         py = Math.max(40, height / 2 - PANEL_H / 2 - 10);
-        addDrawableChild(ButtonWidget.builder(ScreenTexts.DONE, b -> {
+        addRenderableWidget(Button.builder(CommonComponents.GUI_DONE, b -> {
             dropCursor();
-            List<ItemStack> tpl = SurvivalToolbars.storage(client).get(index);
+            List<ItemStack> tpl = SurvivalToolbars.storage(minecraft).get(index);
             for (int t = 0; t < ToolbarStorage.SIZE; t++) tpl.set(t, slots[t].copy());
-            SurvivalToolbars.storage(client).save();
+            SurvivalToolbars.storage(minecraft).save();
             BHSToolbarScreen.savedAtMs = System.currentTimeMillis();
             BHSToolbarScreen.savedIndex = index;
-            close();
-        }).dimensions(width / 2 - 155, height - 28, 150, 20).build());
-        addDrawableChild(ButtonWidget.builder(ScreenTexts.CANCEL, b -> close())
-            .dimensions(width / 2 + 5, height - 28, 150, 20).build());
+            onClose();
+        }).bounds(width / 2 - 155, height - 28, 150, 20).build());
+        addRenderableWidget(Button.builder(CommonComponents.GUI_CANCEL, b -> onClose())
+            .bounds(width / 2 + 5, height - 28, 150, 20).build());
     }
 
     // Slot konumu (sol-üst köşe, 18x18). Vanilla envanter ölçüleri:
@@ -109,19 +108,19 @@ public final class BHSToolbarEditScreen extends Screen {
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
         super.render(context, mouseX, mouseY, delta); // 1.20.2+: Screen.render arka plan + düğmeleri çizer; içerik üstüne
-        context.drawCenteredTextWithShadow(textRenderer, title, width / 2, 12, 0xFFFFFF);
+        context.drawCenteredString(font, title, width / 2, 12, 0xFFFFFF);
         int ty = 24;
-        for (OrderedText line : textRenderer.wrapLines(Text.translatable("betterhotbarswap.toolbar.edit_help"), width - 40)) {
-            context.drawCenteredTextWithShadow(textRenderer, line, width / 2, ty, 0xA0A0A0);
+        for (FormattedCharSequence line : font.split(Component.translatable("betterhotbarswap.toolbar.edit_help"), width - 40)) {
+            context.drawCenteredString(font, line, width / 2, ty, 0xA0A0A0);
             ty += 10;
         }
         panel(context, px, py, PANEL_W, PANEL_H);
         // Sol el slotu için küçük panel (vanilla HUD'daki gibi hotbar'ın solunda).
         panel(context, px + OFF_X - 4, py + 71, 26, 26);
-        context.drawText(textRenderer, Text.translatable("container.inventory"), px + 8, py + 6, 0x404040, false);
-        PlayerInventory inv = client.player != null ? client.player.getInventory() : null;
+        context.drawString(font, Component.translatable("container.inventory"), px + 8, py + 6, 0x404040, false);
+        Inventory inv = minecraft.player != null ? minecraft.player.getInventory() : null;
         int hovered = slotAt(mouseX, mouseY);
         for (int t = 0; t < ToolbarStorage.SIZE; t++) {
             int x = sx(t);
@@ -130,33 +129,33 @@ public final class BHSToolbarEditScreen extends Screen {
             ItemStack st = slots[t];
             // Boş sol el: vanilla'nın kalkan silüeti (kaynak paketine de uyar).
             if (t == ToolbarStorage.OFFHAND && st.isEmpty()) {
-                context.drawSprite(x + 1, y + 1, 0, 16, 16, client.getSpriteAtlas(
-                    net.minecraft.screen.PlayerScreenHandler.BLOCK_ATLAS_TEXTURE)
-                    .apply(net.minecraft.screen.PlayerScreenHandler.EMPTY_OFFHAND_ARMOR_SLOT));
+                context.blit(x + 1, y + 1, 0, 16, 16, minecraft.getTextureAtlas(
+                    net.minecraft.world.inventory.InventoryMenu.BLOCK_ATLAS)
+                    .apply(net.minecraft.world.inventory.InventoryMenu.EMPTY_ARMOR_SLOT_SHIELD));
             }
-            context.drawItem(st, x + 1, y + 1);
-            context.drawItemInSlot(textRenderer, st, x + 1, y + 1);
+            context.renderItem(st, x + 1, y + 1);
+            context.renderItemDecorations(font, st, x + 1, y + 1);
             if (inv != null && !st.isEmpty() && !has(inv, st)) context.fill(x + 1, y + 1, x + 17, y + 17, 300, 0x66FF0000);
             if (t == hovered) context.fill(x + 1, y + 1, x + 17, y + 17, 300, 0x80FFFFFF);
         }
         if (!cursor.isEmpty()) {
-            context.getMatrices().push();
-            context.getMatrices().translate(0, 0, 400);
-            context.drawItem(cursor, mouseX - 8, mouseY - 8);
-            context.drawItemInSlot(textRenderer, cursor, mouseX - 8, mouseY - 8);
-            context.getMatrices().pop();
+            context.pose().pushPose();
+            context.pose().translate(0, 0, 400);
+            context.renderItem(cursor, mouseX - 8, mouseY - 8);
+            context.renderItemDecorations(font, cursor, mouseX - 8, mouseY - 8);
+            context.pose().popPose();
         } else if (hovered >= 0 && !slots[hovered].isEmpty()) {
-            context.drawItemTooltip(textRenderer, slots[hovered], mouseX, mouseY);
+            context.renderTooltip(font, slots[hovered], mouseX, mouseY);
         }
     }
 
-    private static boolean has(PlayerInventory inv, ItemStack want) {
-        for (int i = 0; i < 41; i++) if (inv.getStack(i).getItem() == want.getItem()) return true;
+    private static boolean has(Inventory inv, ItemStack want) {
+        for (int i = 0; i < 41; i++) if (inv.getItem(i).getItem() == want.getItem()) return true;
         return false;
     }
 
     // Vanilla konteyner paneli: siyah çerçeve, beyaz üst-sol / koyu alt-sağ kabartma, C6C6C6 gövde.
-    private static void panel(DrawContext c, int x, int y, int w, int h) {
+    private static void panel(GuiGraphics c, int x, int y, int w, int h) {
         c.fill(x, y, x + w, y + h, 0xFF000000);
         c.fill(x + 1, y + 1, x + w - 1, y + h - 1, 0xFFFFFFFF);
         c.fill(x + 3, y + 3, x + w - 1, y + h - 1, 0xFF555555);
@@ -164,19 +163,19 @@ public final class BHSToolbarEditScreen extends Screen {
     }
 
     // Vanilla çökük slot (18x18).
-    static void slot(DrawContext c, int x, int y) {
+    static void slot(GuiGraphics c, int x, int y) {
         c.fill(x, y, x + 18, y + 18, 0xFF373737);
         c.fill(x + 1, y + 1, x + 18, y + 18, 0xFFFFFFFF);
         c.fill(x + 1, y + 1, x + 17, y + 17, 0xFF8B8B8B);
     }
 
     @Override
-    public void close() {
-        if (client != null) client.setScreen(parent);
+    public void onClose() {
+        if (minecraft != null) minecraft.setScreen(parent);
     }
 
     @Override
-    public boolean shouldPause() {
+    public boolean isPauseScreen() {
         return false;
     }
 }

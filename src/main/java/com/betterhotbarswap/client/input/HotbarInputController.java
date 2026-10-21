@@ -4,14 +4,13 @@ import com.betterhotbarswap.BetterHotbarSwap;
 import com.betterhotbarswap.client.debug.BHSDebug;
 import com.betterhotbarswap.config.BHSConfig;
 import com.betterhotbarswap.mixin.HandledScreenAccessor;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.ingame.CreativeInventoryScreen;
-import net.minecraft.client.gui.screen.ingame.HandledScreen;
-import net.minecraft.client.gui.screen.ingame.InventoryScreen;
-import net.minecraft.client.option.KeyBinding;
-import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.screen.ScreenHandler;
-import net.minecraft.screen.slot.Slot;
+import net.minecraft.client.KeyMapping;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.Slot;
 
 public final class HotbarInputController {
     public static long lastSwapNanos = 0L;
@@ -61,7 +60,7 @@ public final class HotbarInputController {
             shiftLatch = true;
             return;
         }
-        int hb = hotbarIndex(MinecraftClient.getInstance(), keyCode, scanCode);
+        int hb = hotbarIndex(Minecraft.getInstance(), keyCode, scanCode);
         if (hb >= 0 && hb <= 9) {
             lastHotkey = keyCode;
             lastHotbar = hb;
@@ -85,16 +84,16 @@ public final class HotbarInputController {
 
     // Bug #30: secili slot ASLA degismez. SWAP/PICKUP/drop yan etkisiyle
     // selectedSlot oynamissa geri alinir (evrensel, bayraktan bagimsiz).
-    public static void restoreSelectionIfChanged(MinecraftClient client, int prevSel) {
+    public static void restoreSelectionIfChanged(Minecraft client, int prevSel) {
         try {
             if (client == null || client.player == null) return;
-            PlayerInventory inv = client.player.getInventory();
+            Inventory inv = client.player.getInventory();
             if (prevSel < 0 || prevSel > 8) return;
-            if (inv.selectedSlot != prevSel) {
-                BHSDebug.log("SEL-RESTORE prev=" + prevSel + " cur=" + inv.selectedSlot + " -> geri alindi");
-                inv.selectedSlot = prevSel;
+            if (inv.selected != prevSel) {
+                BHSDebug.log("SEL-RESTORE prev=" + prevSel + " cur=" + inv.selected + " -> geri alindi");
+                inv.selected = prevSel;
                 try {
-                    client.player.networkHandler.sendPacket(new net.minecraft.network.packet.c2s.play.UpdateSelectedSlotC2SPacket(prevSel));
+                    client.player.connection.send(new net.minecraft.network.protocol.game.ServerboundSetCarriedItemPacket(prevSel));
                 } catch (Exception ignored) {}
             }
         } catch (Exception ignored) {}
@@ -102,44 +101,44 @@ public final class HotbarInputController {
 
     private static String layoutDumpKey = "";
 
-    private static void dumpLayout(ScreenHandler handler) {
-        String key = handler.getClass().getName() + "#" + handler.slots.size() + "#" + handler.syncId;
+    private static void dumpLayout(AbstractContainerMenu handler) {
+        String key = handler.getClass().getName() + "#" + handler.slots.size() + "#" + handler.containerId;
         if (layoutDumpKey.equals(key)) return;
         layoutDumpKey = key;
         if (com.betterhotbarswap.config.BHSConfig.debugEnabled) BetterHotbarSwap.LOGGER.info("[BHS-LAYOUT] handler={} slots={} sync={}",
-            handler.getClass().getName(), handler.slots.size(), handler.syncId);
+            handler.getClass().getName(), handler.slots.size(), handler.containerId);
         for (Slot s : handler.slots) {
             String stack;
             try {
-                stack = s.getStack().isEmpty() ? "empty" : s.getStack().getName().getString();
+                stack = s.getItem().isEmpty() ? "empty" : s.getItem().getHoverName().getString();
             } catch (Exception e) {
                 stack = "?";
             }
             if (com.betterhotbarswap.config.BHSConfig.debugEnabled) BetterHotbarSwap.LOGGER.info("[BHS-LAYOUT] id={} inv={} idx={} stack={}",
-                s.id, s.inventory == null ? "null" : s.inventory.getClass().getName(), s.getIndex(), stack);
+                s.index, s.container == null ? "null" : s.container.getClass().getName(), s.getContainerSlot(), stack);
         }
     }
 
     // Oyuncunun GERÇEK hotbar bağları (remap uyumlu) + numpad yedeği.
     // Menü-özel kod YOK: hangi menü olursa olsun aynı eşleşme (evrensellik, bug #13).
-    public static int hotbarIndex(MinecraftClient client, int keyCode, int scanCode) {
+    public static int hotbarIndex(Minecraft client, int keyCode, int scanCode) {
         // Sol-el (F) en once: vanilla paritesi (swapHands her seyi yener).
         try {
-            if (client != null && client.options != null && client.options.swapHandsKey != null
-                && client.options.swapHandsKey.matchesKey(keyCode, scanCode)) return 10;
+            if (client != null && client.options != null && client.options.keySwapOffhand != null
+                && client.options.keySwapOffhand.matches(keyCode, scanCode)) return 10;
         } catch (Exception ignored) {
         }
         // Özel 10. yuva (main-only) önce: açık kullanıcı seçimi her zaman kazanır.
         try {
-            net.minecraft.client.option.KeyBinding hotbar10 = com.betterhotbarswap.client.BetterHotbarSwapClient.getHotbar10Key();
-            if (hotbar10 != null && hotbar10.matchesKey(keyCode, scanCode)) return 9;
+            net.minecraft.client.KeyMapping hotbar10 = com.betterhotbarswap.client.BetterHotbarSwapClient.getHotbar10Key();
+            if (hotbar10 != null && hotbar10.matches(keyCode, scanCode)) return 9;
         } catch (Exception ignored) {
         }
-        if (client != null && client.options != null && client.options.hotbarKeys != null) {
-            KeyBinding[] keys = client.options.hotbarKeys;
+        if (client != null && client.options != null && client.options.keyHotbarSlots != null) {
+            KeyMapping[] keys = client.options.keyHotbarSlots;
             for (int i = 0; i < keys.length && i < 9; i++) {
                 try {
-                    if (keys[i] != null && keys[i].matchesKey(keyCode, scanCode)) return i;
+                    if (keys[i] != null && keys[i].matches(keyCode, scanCode)) return i;
                 } catch (Exception ignored) {
                 }
             }
@@ -154,7 +153,7 @@ public final class HotbarInputController {
     // asla sessiz yutulmaz.
     public static boolean isShiftDown() {
         try {
-            long win = MinecraftClient.getInstance().getWindow().getHandle();
+            long win = Minecraft.getInstance().getWindow().getWindow();
             return org.lwjgl.glfw.GLFW.glfwGetKey(win, org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_SHIFT)
                     == org.lwjgl.glfw.GLFW.GLFW_PRESS
                 || org.lwjgl.glfw.GLFW.glfwGetKey(win, org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT_SHIFT)
@@ -169,20 +168,20 @@ public final class HotbarInputController {
     // tuş OLAYININ modifiers biti kullanılır (o an için authoritative).
     // Tick'lerde Shift koşulu YOKTUR; oturum ömrü = hotkey basılı (olay-güdümlü
     // downKeys). Harita ilkesi: belirsizse vazgeç, ama yoklama yok.
-    public static boolean onKeyPressed(HandledScreen<?> screen, int keyCode, int scanCode, int modifiers) {
+    public static boolean onKeyPressed(AbstractContainerScreen<?> screen, int keyCode, int scanCode, int modifiers) {
         // Shift latch: basışta kurulur, bırakışta düşer (KeyboardReleaseMixin).
         if (keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_SHIFT
             || keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT_SHIFT) {
             shiftLatch = true;
             return false;
         }
-        int hotbarIndex = hotbarIndex(MinecraftClient.getInstance(), keyCode, scanCode);
+        int hotbarIndex = hotbarIndex(Minecraft.getInstance(), keyCode, scanCode);
         if (hotbarIndex < 0 || hotbarIndex > 10) return false;
         // Odaklı öğe (tarif kitabı araması, modların arama kutuları) ÖNCE:
         // vanilla da tuşu önce odaklı öğeye verir (javap: HandledScreen.keyPressed
         // ilk iş Screen.keyPressed). Yazı yazılıyorsa takas YOK.
         try {
-            net.minecraft.client.gui.Element focused = screen.getFocused();
+            net.minecraft.client.gui.components.events.GuiEventListener focused = screen.getFocused();
             if (focused != null && focused.keyPressed(keyCode, scanCode, modifiers)) return true;
         } catch (Exception ignored) {
         }
@@ -194,8 +193,8 @@ public final class HotbarInputController {
     // Fareye bağlı kısayollar (Mouse4/5 vb.): vanilla bunları mouseClicked içinde
     // onMouseClick(int) ile çözer. Aynı sisteme sokulur; fare tekrarı yoktur
     // (her tık taze basış). Shift fiziksel latch'ten okunur.
-    public static boolean onMouseHotkey(HandledScreen<?> screen, int button) {
-        int hotbarIndex = mouseHotbarIndex(MinecraftClient.getInstance(), button);
+    public static boolean onMouseHotkey(AbstractContainerScreen<?> screen, int button) {
+        int hotbarIndex = mouseHotbarIndex(Minecraft.getInstance(), button);
         if (hotbarIndex < 0) return false;
         int code = MOUSE_CODE_BASE - button;
         releasePressed(code);
@@ -205,13 +204,13 @@ public final class HotbarInputController {
     // Klavye kodlarıyla çakışmayan sahte kod (downKeys kaydı için).
     private static final int MOUSE_CODE_BASE = -1000;
 
-    private static int mouseHotbarIndex(MinecraftClient client, int button) {
+    private static int mouseHotbarIndex(Minecraft client, int button) {
         if (client == null || client.options == null) return -1;
         try {
-            if (client.options.swapHandsKey.matchesMouse(button)) return 10;
-            KeyBinding hotbar10 = com.betterhotbarswap.client.BetterHotbarSwapClient.getHotbar10Key();
+            if (client.options.keySwapOffhand.matchesMouse(button)) return 10;
+            KeyMapping hotbar10 = com.betterhotbarswap.client.BetterHotbarSwapClient.getHotbar10Key();
             if (hotbar10 != null && hotbar10.matchesMouse(button)) return 9;
-            KeyBinding[] keys = client.options.hotbarKeys;
+            KeyMapping[] keys = client.options.keyHotbarSlots;
             for (int i = 0; i < keys.length && i < 9; i++) {
                 if (keys[i] != null && keys[i].matchesMouse(button)) return i;
             }
@@ -220,9 +219,9 @@ public final class HotbarInputController {
         return -1;
     }
 
-    private static boolean handleHotkey(HandledScreen<?> screen, int keyCode, int hotbarIndex, int modifiers) {
+    private static boolean handleHotkey(AbstractContainerScreen<?> screen, int keyCode, int hotbarIndex, int modifiers) {
         int prevSel = -1;
-        try { prevSel = MinecraftClient.getInstance().player.getInventory().selectedSlot; } catch (Exception ignored) {}
+        try { prevSel = Minecraft.getInstance().player.getInventory().selected; } catch (Exception ignored) {}
         // Canlılık kaydı: basılı tuş HER olayda tazelenir (boş slotta gezerken
         // bile). Yoksa TTL dolar, tutuş "taze basış" sanılır, latch'ler ölür.
         // Taze/tekrar ayrımı için ÖNCE okunur.
@@ -238,11 +237,11 @@ public final class HotbarInputController {
         if (shiftHeld) shiftLatch = true;
         Slot focusedSlot = ((HandledScreenAccessor) screen).betterhotbarswap$getFocusedSlot();
         BHSDebug.update(focusedSlot, hotbarIndex);
-        ScreenHandler handler = screen.getScreenHandler();
+        AbstractContainerMenu handler = screen.getMenu();
         // İmleçte eşya varken HİÇBİR alım yapılmaz (harita ilkesi #4; imleç artığını
         // yapısal olarak kapatır). Sürükleme + elde tutma ikisi de dahildir.
         if (focusedSlot == null || ((HandledScreenAccessor) screen).betterhotbarswap$isCursorDragging()
-            || !handler.getCursorStack().isEmpty()) {
+            || !handler.getCarried().isEmpty()) {
             // Tekrarlar sessiz yutulur (30Hz PASS spami yok); taze basış loglanır.
             if (repeat) return swallowRepeat;
             String reason = focusedSlot == null ? "no-focused-slot"
@@ -257,27 +256,27 @@ public final class HotbarInputController {
         // Shift her tekrarda yeniden okunur: tutarken Shift'e basılırsa o tekrarda
         // bulk ateşlenir, bırakınca akış durur.
         if (repeat) {
-            boolean holdFlow = !(screen instanceof CreativeInventoryScreen)
-                && !(focusedSlot.inventory instanceof PlayerInventory);
+            boolean holdFlow = !(screen instanceof CreativeModeInventoryScreen)
+                && !(focusedSlot.container instanceof Inventory);
             if (!holdFlow) return swallowRepeat;
         }
-        boolean isFromCreativeList = !(focusedSlot.inventory instanceof PlayerInventory);
-        if (screen instanceof CreativeInventoryScreen) {
+        boolean isFromCreativeList = !(focusedSlot.container instanceof Inventory);
+        if (screen instanceof CreativeModeInventoryScreen) {
             // "0" modu creative sekmelerde yok (vanilla davranır).
             if (hotbarIndex > 8) return false;
             dumpLayout(handler);
-            if (SlotClassifier.isAssignableSlot(focusedSlot, MinecraftClient.getInstance().player)) {
+            if (SlotClassifier.isAssignableSlot(focusedSlot, Minecraft.getInstance().player)) {
                 boolean ok = VanillaClickExecutor.assignSlotToHotbar(handler, focusedSlot, hotbarIndex, isFromCreativeList);
-                restoreSelectionIfChanged(MinecraftClient.getInstance(), prevSel);
+                restoreSelectionIfChanged(Minecraft.getInstance(), prevSel);
                 if (ok) {
                     markPressed(keyCode);
                     lastSwapNanos = System.nanoTime();
                 }
-                BHSDebug.log("CREATIVE-TAB " + BHSDebug.describeSlot(focusedSlot, MinecraftClient.getInstance().player)
+                BHSDebug.log("CREATIVE-TAB " + BHSDebug.describeSlot(focusedSlot, Minecraft.getInstance().player)
                     + " key->hotbar" + (hotbarIndex + 1) + " result=" + ok);
                 return ok;
             }
-            BHSDebug.log("PASS creative-tab not-assignable " + BHSDebug.describeSlot(focusedSlot, MinecraftClient.getInstance().player));
+            BHSDebug.log("PASS creative-tab not-assignable " + BHSDebug.describeSlot(focusedSlot, Minecraft.getInstance().player));
             return false;
         }
         // Düzenli toplama (F6): Shift + kısayol ile GÖSTERİLEN depo yığını
@@ -288,15 +287,15 @@ public final class HotbarInputController {
             if (TidyCollect.canTake(handler, focusedSlot)) {
                 int takeResult = TidyCollect.tryTake(handler, focusedSlot, hotbarIndex);
                 if (takeResult == TidyCollect.TAKE_PLACED) {
-                    restoreSelectionIfChanged(MinecraftClient.getInstance(), prevSel);
+                    restoreSelectionIfChanged(Minecraft.getInstance(), prevSel);
                     markPressed(keyCode);
                     lastSwapNanos = System.nanoTime();
-                    BHSDebug.log("SWAP-TRY " + BHSDebug.describeSlot(focusedSlot, MinecraftClient.getInstance().player)
+                    BHSDebug.log("SWAP-TRY " + BHSDebug.describeSlot(focusedSlot, Minecraft.getInstance().player)
                         + " key->hotbar" + (hotbarIndex + 1) + " result=tidy -> " + TidyCollect.slotName(TidyCollect.lastDest()));
                     return true;
                 }
                 if (takeResult == TidyCollect.TAKE_FAILED) {
-                    TidyCollect.tellFull(MinecraftClient.getInstance());
+                    TidyCollect.tellFull(Minecraft.getInstance());
                 }
                 markPressed(keyCode);
                 return true;
@@ -305,24 +304,24 @@ public final class HotbarInputController {
             // slotu / oyuncu slotu): tuş YUTULUR. Yoksa hareketi başlatan basış
             // hotbar[N] eşyasını sandığa iter / envanteri karıştırır. "0"/10. slot
             // DAHİL (bug #43: muafken Shift+10 hotbar eşyasını envantere taşıyordu).
-            if (!repeat) BHSDebug.log("TIDY armed -> tus yutuldu " + BHSDebug.describeSlot(focusedSlot, MinecraftClient.getInstance().player));
+            if (!repeat) BHSDebug.log("TIDY armed -> tus yutuldu " + BHSDebug.describeSlot(focusedSlot, Minecraft.getInstance().player));
             return true;
         }
-        if (SlotClassifier.isAssignableSlot(focusedSlot, MinecraftClient.getInstance().player)) {
+        if (SlotClassifier.isAssignableSlot(focusedSlot, Minecraft.getInstance().player)) {
             // Shift + Kısayol bulk: output slotta Shift ile basılınca ilk alım +
             // tick-tekrarlayıcı (output boşalana kadar). Config kapalıysa normal tek alım.
             boolean shiftBulkTake = false;
             try {
                 shiftBulkTake = BHSConfig.shiftHotbarPickup && shiftHeld
-                    && SlotClassifier.isProbableOutputSlot(focusedSlot, MinecraftClient.getInstance().player, screen instanceof CreativeInventoryScreen);
+                    && SlotClassifier.isProbableOutputSlot(focusedSlot, Minecraft.getInstance().player, screen instanceof CreativeModeInventoryScreen);
             } catch (Exception e) {
                 BHSDebug.log("SHIFT-ERR bulk-hesap " + e);
             }
             ShiftBulkQuickMove.cancel();
             // Bulk çapası alımdan ÖNCE yakalanır (sonrası boş olur).
-            net.minecraft.item.ItemStack bulkAnchor = focusedSlot.getStack().copy();
+            net.minecraft.world.item.ItemStack bulkAnchor = focusedSlot.getItem().copy();
             try {
-                if (SlotClassifier.isProbableOutputSlot(focusedSlot, MinecraftClient.getInstance().player, screen instanceof CreativeInventoryScreen)) {
+                if (SlotClassifier.isProbableOutputSlot(focusedSlot, Minecraft.getInstance().player, screen instanceof CreativeModeInventoryScreen)) {
                     BHSDebug.log("OUT shift=" + shiftHeld + " cfg=" + BHSConfig.shiftHotbarPickup + " bulk=" + shiftBulkTake);
                 }
             } catch (Exception e) {
@@ -330,12 +329,12 @@ public final class HotbarInputController {
             }
             // Oturumsuz + boş-slot tekrarları sessiz yutulur (biten hold'un
             // artçıları; taze basış yukarıda loglanır).
-            if (repeat && !focusedSlot.hasStack()) return swallowRepeat;
+            if (repeat && !focusedSlot.hasItem()) return swallowRepeat;
             // Shift + Kısayol burst: N craft simüle edilir, tüm paketler AYNI
             // tick'te gider (0.06-0.1sn algısı). Uygun değilse tek alım + drain.
             // İmleç doluysa sadece tek alım yapılır.
-            if (shiftBulkTake && handler.getCursorStack().isEmpty()) {
-                MinecraftClient client = MinecraftClient.getInstance();
+            if (shiftBulkTake && handler.getCarried().isEmpty()) {
+                Minecraft client = Minecraft.getInstance();
                 BurstTakes.BurstPlan burst = BurstTakes.plan(client, handler, focusedSlot, hotbarIndex, bulkAnchor);
                 if (burst != null && burst.crafts >= 2) {
                     BurstTakes.fire(client, handler, burst, hotbarIndex);
@@ -343,26 +342,26 @@ public final class HotbarInputController {
                     ShiftBulkQuickMove.start(handler, focusedSlot, hotbarIndex, bulkAnchor, burst.crafts);
                     markPressed(keyCode);
                     lastSwapNanos = System.nanoTime();
-                    BHSDebug.log("SWAP-TRY " + BHSDebug.describeSlot(focusedSlot, MinecraftClient.getInstance().player)
+                    BHSDebug.log("SWAP-TRY " + BHSDebug.describeSlot(focusedSlot, Minecraft.getInstance().player)
                         + " key->hotbar" + (hotbarIndex + 1) + " result=burst crafts=" + burst.crafts);
                     return true;
                 }
             }
             boolean ok = VanillaClickExecutor.assignSlotToHotbar(handler, focusedSlot, hotbarIndex, false);
-            restoreSelectionIfChanged(MinecraftClient.getInstance(), prevSel);
+            restoreSelectionIfChanged(Minecraft.getInstance(), prevSel);
             if (ok) {
                 markPressed(keyCode);
                 lastSwapNanos = System.nanoTime();
                 // Drain hotbar/main-endekslidir (0-9): offhand (10) tekil alimdir.
-                if (shiftBulkTake && hotbarIndex != 10 && handler.getCursorStack().isEmpty()) {
+                if (shiftBulkTake && hotbarIndex != 10 && handler.getCarried().isEmpty()) {
                     ShiftBulkQuickMove.start(handler, focusedSlot, hotbarIndex, bulkAnchor, 1);
                 }
             }
-            BHSDebug.log("SWAP-TRY " + BHSDebug.describeSlot(focusedSlot, MinecraftClient.getInstance().player)
+            BHSDebug.log("SWAP-TRY " + BHSDebug.describeSlot(focusedSlot, Minecraft.getInstance().player)
                 + " key->hotbar" + (hotbarIndex + 1) + " result=" + ok);
             return ok;
         }
-        BHSDebug.log("PASS not-assignable " + BHSDebug.describeSlot(focusedSlot, MinecraftClient.getInstance().player));
+        BHSDebug.log("PASS not-assignable " + BHSDebug.describeSlot(focusedSlot, Minecraft.getInstance().player));
         return false;
     }
 }

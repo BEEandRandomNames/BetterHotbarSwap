@@ -2,41 +2,41 @@ package com.betterhotbarswap.client;
 
 import com.betterhotbarswap.config.BHSConfig;
 import com.betterhotbarswap.config.BHSConfigScreen;
+import com.mojang.blaze3d.platform.InputConstants;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.option.KeyBinding;
-import net.minecraft.client.util.InputUtil;
 import org.lwjgl.glfw.GLFW;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
+import net.minecraft.client.KeyMapping;
+import net.minecraft.client.Minecraft;
 import com.betterhotbarswap.client.debug.BHSDebug;
 
 public final class BetterHotbarSwapClient implements ClientModInitializer {
     // Açılış damgası: HANGİ build'in çalıştığını latest.log'dan kanıtlar
     // (bayat-build testlerini bitirir). Her dağıtımdan önce BUMP edilir.
     private static final String BUILD_ID = "2026-10-21-1.21a";
-    private static KeyBinding settingsKey;
-    private static KeyBinding hotbar10Key;
-    private static KeyBinding toolbarsKey;
+    private static KeyMapping settingsKey;
+    private static KeyMapping hotbar10Key;
+    private static KeyMapping toolbarsKey;
     // Modun kendi araç çubuğu kaydet/yükle tuşları (her modda, sadece taşır).
     // Creative'de vanilla C/X vanilla'ya kalır; bu yüzden ayrı tuş şart.
-    private static KeyBinding toolbarSaveKey;
-    private static KeyBinding toolbarLoadKey;
+    private static KeyMapping toolbarSaveKey;
+    private static KeyMapping toolbarLoadKey;
 
-    public static KeyBinding getToolbarSaveKey() {
+    public static KeyMapping getToolbarSaveKey() {
         return toolbarSaveKey;
     }
 
-    public static KeyBinding getToolbarLoadKey() {
+    public static KeyMapping getToolbarLoadKey() {
         return toolbarLoadKey;
     }
 
-    public static KeyBinding getHotbar10Key() {
+    public static KeyMapping getHotbar10Key() {
         return hotbar10Key;
     }
 
-    public static KeyBinding getToolbarsKey() {
+    public static KeyMapping getToolbarsKey() {
         return toolbarsKey;
     }
 
@@ -45,35 +45,35 @@ public final class BetterHotbarSwapClient implements ClientModInitializer {
         com.betterhotbarswap.BetterHotbarSwap.LOGGER.info("[BHS] init build={}", BUILD_ID);
         BHSConfig.load();
         UpdateChecker.start();
-        settingsKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+        settingsKey = KeyBindingHelper.registerKeyBinding(new KeyMapping(
             "key.betterhotbarswap.settings",
-            InputUtil.Type.KEYSYM,
+            InputConstants.Type.KEYSYM,
             GLFW.GLFW_KEY_UNKNOWN,
             "category.betterhotbarswap"
         ));
-        hotbar10Key = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+        hotbar10Key = KeyBindingHelper.registerKeyBinding(new KeyMapping(
             "key.betterhotbarswap.hotbar10",
-            InputUtil.Type.KEYSYM,
+            InputConstants.Type.KEYSYM,
             GLFW.GLFW_KEY_UNKNOWN,
             "category.betterhotbarswap"
         ));
         // Araç çubukları ekranı: varsayılan H (vanilla'da boş), Kontroller'den değişir.
-        toolbarsKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+        toolbarsKey = KeyBindingHelper.registerKeyBinding(new KeyMapping(
             "key.betterhotbarswap.toolbars",
-            InputUtil.Type.KEYSYM,
+            InputConstants.Type.KEYSYM,
             GLFW.GLFW_KEY_H,
             "category.betterhotbarswap"
         ));
         // Varsayılan N/M: vanilla'da boş.
-        toolbarSaveKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+        toolbarSaveKey = KeyBindingHelper.registerKeyBinding(new KeyMapping(
             "key.betterhotbarswap.toolbar_save",
-            InputUtil.Type.KEYSYM,
+            InputConstants.Type.KEYSYM,
             GLFW.GLFW_KEY_N,
             "category.betterhotbarswap"
         ));
-        toolbarLoadKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+        toolbarLoadKey = KeyBindingHelper.registerKeyBinding(new KeyMapping(
             "key.betterhotbarswap.toolbar_load",
-            InputUtil.Type.KEYSYM,
+            InputConstants.Type.KEYSYM,
             GLFW.GLFW_KEY_M,
             "category.betterhotbarswap"
         ));
@@ -83,12 +83,12 @@ public final class BetterHotbarSwapClient implements ClientModInitializer {
         HudRenderCallback.EVENT.register((drawContext, tickDelta) -> BHSDebug.render(drawContext));
     }
 
-    private static void onClientTick(MinecraftClient client) {
-        while (settingsKey.wasPressed()) {
-            client.setScreen(new BHSConfigScreen(client.currentScreen));
+    private static void onClientTick(Minecraft client) {
+        while (settingsKey.consumeClick()) {
+            client.setScreen(new BHSConfigScreen(client.screen));
         }
-        while (toolbarsKey.wasPressed()) {
-            client.setScreen(new com.betterhotbarswap.config.BHSToolbarScreen(client.currentScreen));
+        while (toolbarsKey.consumeClick()) {
+            client.setScreen(new com.betterhotbarswap.config.BHSToolbarScreen(client.screen));
         }
         com.betterhotbarswap.client.input.ShiftBulkQuickMove.onTick(client);
         UpdateChecker.onTick(client);

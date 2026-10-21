@@ -2,15 +2,14 @@ package com.betterhotbarswap.client.input;
 
 import com.betterhotbarswap.client.debug.BHSDebug;
 import com.betterhotbarswap.config.BHSConfig;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.item.ItemStack;
-import net.minecraft.screen.ScreenHandler;
-import net.minecraft.screen.slot.Slot;
-import net.minecraft.screen.slot.SlotActionType;
-
 import java.util.ArrayList;
 import java.util.List;
+import net.minecraft.client.Minecraft;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.ItemStack;
 
 // Düzenli toplama (F6) - FARE-GÜDÜMLÜ alım kitaplığı (v2 refound).
 //
@@ -32,12 +31,12 @@ public final class TidyCollect {
     private TidyCollect() {
     }
 
-    private static ScreenHandler wallHandler;
+    private static AbstractContainerMenu wallHandler;
     private static final boolean[] wallClaimed = new boolean[10];
     private static int lastTakenDest = -1;
     private static long lastFullMsgMs;
 
-    private static void resetWall(ScreenHandler h) {
+    private static void resetWall(AbstractContainerMenu h) {
         if (wallHandler != h) {
             wallHandler = h;
             java.util.Arrays.fill(wallClaimed, false);
@@ -55,16 +54,16 @@ public final class TidyCollect {
     // Saf-depo ekranı mı? (output slotu YOKSA: crafting/fırın/tezgah elenir.)
     // CraftingResultSlot sınıfı içerik beklemeden eler (boş output'lu üretim
     // ekranında ızgara soygunu olmasın diye).
-    private static boolean isPureStorage(ScreenHandler h, PlayerInventory inv) {
+    private static boolean isPureStorage(AbstractContainerMenu h, Inventory inv) {
         try {
             for (Slot s : h.slots) {
-                if (s == null || s.inventory == null) continue;
-                if (s.inventory == inv) continue;
-                if (s instanceof net.minecraft.screen.slot.CraftingResultSlot) return false;
-                if (!s.hasStack()) continue;
-                if (!s.canTakeItems(MinecraftClient.getInstance().player)) continue;
-                ItemStack st = s.getStack();
-                if (!s.canInsert(st)) return false;
+                if (s == null || s.container == null) continue;
+                if (s.container == inv) continue;
+                if (s instanceof net.minecraft.world.inventory.ResultSlot) return false;
+                if (!s.hasItem()) continue;
+                if (!s.mayPickup(Minecraft.getInstance().player)) continue;
+                ItemStack st = s.getItem();
+                if (!s.mayPlace(st)) return false;
             }
         } catch (Exception e) {
             return false;
@@ -74,20 +73,20 @@ public final class TidyCollect {
 
     // Bu slot alıma uygun mu? (taze okuma; fare konumu + wyścig güvenliği için
     // çağıran her seferinde yeniden doğrular.)
-    public static boolean canTake(ScreenHandler h, Slot slot) {
+    public static boolean canTake(AbstractContainerMenu h, Slot slot) {
         try {
-            MinecraftClient client = MinecraftClient.getInstance();
-            if (client == null || client.player == null || client.interactionManager == null) return false;
+            Minecraft client = Minecraft.getInstance();
+            if (client == null || client.player == null || client.gameMode == null) return false;
             if (!BHSConfig.tidyCollect) return false;
-            if (h == null || slot == null || slot.inventory == null) return false;
-            PlayerInventory inv = client.player.getInventory();
-            if (slot.inventory == inv) return false;
-            if (!slot.hasStack() || !slot.canTakeItems(client.player)) return false;
+            if (h == null || slot == null || slot.container == null) return false;
+            Inventory inv = client.player.getInventory();
+            if (slot.container == inv) return false;
+            if (!slot.hasItem() || !slot.mayPickup(client.player)) return false;
             // Modlu depo büyük yığını (ör. 256'lık sırt çantası): PICKUP zinciri
             // max'tan fazlasını imleçte bırakırdı -> vanilla'ya bırak.
-            if (slot.getStack().getCount() > slot.getStack().getMaxCount()) return false;
+            if (slot.getItem().getCount() > slot.getItem().getMaxStackSize()) return false;
             if (SlotClassifier.isProbableOutputSlot(slot, client.player, false)) return false;
-            if (!h.getCursorStack().isEmpty()) return false;
+            if (!h.getCarried().isEmpty()) return false;
             if (!isPureStorage(h, inv)) return false;
             return true;
         } catch (Exception e) {
@@ -97,7 +96,7 @@ public final class TidyCollect {
 
     // Ana giriş: hover/tıklanan yığını anchor düzenine yerleştirir.
     // true = yerleşti (vanilla iptal edilir); false = dokunulmadı (vanilla yapar).
-    public static boolean takeFocused(ScreenHandler h, Slot slot, int hotbarIndex) {
+    public static boolean takeFocused(AbstractContainerMenu h, Slot slot, int hotbarIndex) {
         return tryTake(h, slot, hotbarIndex) == TAKE_PLACED;
     }
 
@@ -129,14 +128,14 @@ public final class TidyCollect {
     }
 
     // Kapılı alım: pencere doluysa sessizce reddeder (paket YOK).
-    public static int tryTake(ScreenHandler h, Slot slot, int hotbarIndex) {
+    public static int tryTake(AbstractContainerMenu h, Slot slot, int hotbarIndex) {
         try {
             if (hotbarIndex < 0 || hotbarIndex > 9 || slot == null) return TAKE_FAILED;
-            if (!gateOpen(hotbarIndex, slot.id)) return TAKE_GATED;
-            MinecraftClient client = MinecraftClient.getInstance();
-            if (client == null || client.player == null || client.interactionManager == null) return TAKE_FAILED;
+            if (!gateOpen(hotbarIndex, slot.index)) return TAKE_GATED;
+            Minecraft client = Minecraft.getInstance();
+            if (client == null || client.player == null || client.gameMode == null) return TAKE_FAILED;
             if (!canTake(h, slot)) return TAKE_FAILED;
-            PlayerInventory inv = client.player.getInventory();
+            Inventory inv = client.player.getInventory();
             resetWall(h);
             boolean forceAnchor = !wallClaimed[hotbarIndex];
             List<Integer> order = buildOrder(hotbarIndex);
@@ -151,10 +150,10 @@ public final class TidyCollect {
     }
 
     // Düzenli toplama aktif olabilecek ekran mı? (saf-depo, creative değil)
-    public static boolean isTidyScreen(ScreenHandler h) {
-        MinecraftClient client = MinecraftClient.getInstance();
+    public static boolean isTidyScreen(AbstractContainerMenu h) {
+        Minecraft client = Minecraft.getInstance();
         if (client == null || client.player == null || h == null) return false;
-        if (client.currentScreen instanceof net.minecraft.client.gui.screen.ingame.CreativeInventoryScreen) return false;
+        if (client.screen instanceof net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen) return false;
         return isPureStorage(h, client.player.getInventory());
     }
 
@@ -172,17 +171,17 @@ public final class TidyCollect {
         if (inRedirect) return false;
         try {
             if (!BHSConfig.tidyCollect || !HotbarInputController.isTidyHeld()) return false;
-            MinecraftClient client = MinecraftClient.getInstance();
-            if (client == null || client.player == null || client.interactionManager == null) return false;
-            ScreenHandler h = client.player.currentScreenHandler;
-            if (h == null || h.syncId != syncId || slotId < 0 || slotId >= h.slots.size()) return false;
+            Minecraft client = Minecraft.getInstance();
+            if (client == null || client.player == null || client.gameMode == null) return false;
+            AbstractContainerMenu h = client.player.containerMenu;
+            if (h == null || h.containerId != syncId || slotId < 0 || slotId >= h.slots.size()) return false;
             if (!isTidyScreen(h)) return false;
             Slot slot = h.getSlot(slotId);
             if (!canTake(h, slot)) return false;
             int anchor = HotbarInputController.latchedHotbar();
             inRedirect = true;
-            int prevSel = client.player.getInventory().selectedSlot;
-            ItemStack pre = slot.getStack().copy();
+            int prevSel = client.player.getInventory().selected;
+            ItemStack pre = slot.getItem().copy();
             resetWall(h);
             boolean ok = takeStackIntoOrder(client, client.player.getInventory(), slot, anchor,
                 buildOrder(anchor), !wallClaimed[anchor]);
@@ -206,10 +205,10 @@ public final class TidyCollect {
 
     // Çekirdek alım: src yığınını sıra düzenine yerleştirir. Her yolda imleç
     // BOŞ biter (yer yoksa kaynağa iade edilir). true = yerleşti.
-    private static boolean takeStackIntoOrder(MinecraftClient client, PlayerInventory inv, Slot src,
+    private static boolean takeStackIntoOrder(Minecraft client, Inventory inv, Slot src,
                                               int anchor, List<Integer> order, boolean forceAnchor) {
         lastTakenDest = -1;
-        ItemStack stack = src.getStack().copy();
+        ItemStack stack = src.getItem().copy();
         // Ön-kontrol: sıra toplam kapasitesi yetmiyorsa HİÇ paket gitmez
         // (al-geri-ver flicker'ı olmaz; sessiz false + mesaj üstte).
         if (!hasRoom(inv, stack, anchor, order, forceAnchor)) {
@@ -217,14 +216,14 @@ public final class TidyCollect {
             return false;
         }
         ItemStack chestStack = stack;
-        int srcId = src.id;
+        int srcId = src.index;
         // 0) İlk alım İLK sıraya zorlanır: N dolu-farklıysa eski eşya ÖNCE (imleç
         // boşken) çekilir. Kural: hotbar'daki aynı yığına / en yakın boş hotbar'a
         // (envantere değil); hotbar'da yer yoksa eski yol (sıradaki ilk boş).
         int first = order.get(0);
-        ItemStack cur = inv.getStack(first).copy();
+        ItemStack cur = inv.getItem(first).copy();
         if (forceAnchor && !cur.isEmpty() && !isSame(cur, chestStack)) {
-            ScreenHandler h = handlerOf(inv);
+            AbstractContainerMenu h = handlerOf(inv);
             boolean kept = first < 9 && VanillaClickExecutor.evictWithinHotbar(client, h, inv, first,
                 i -> VanillaClickExecutor.realSlotId(h, inv, i));
             if (!kept) {
@@ -238,48 +237,48 @@ public final class TidyCollect {
                 // SWAP kuralı: tıklanan slot <-> hotbar[düğme] (düğme 0-8).
                 // Main-anchor (9) SWAP'lanamaz: PICKUP çiftiyle taşınır.
                 if (first < 9 && ev < 9) {
-                    client.interactionManager.clickSlot(h.syncId, nReal, ev, SlotActionType.SWAP, client.player);
+                    client.gameMode.handleInventoryMouseClick(h.containerId, nReal, ev, ClickType.SWAP, client.player);
                 } else if (first < 9) {
-                    client.interactionManager.clickSlot(h.syncId, evReal, first, SlotActionType.SWAP, client.player);
+                    client.gameMode.handleInventoryMouseClick(h.containerId, evReal, first, ClickType.SWAP, client.player);
                 } else {
-                    client.interactionManager.clickSlot(h.syncId, nReal, 0, SlotActionType.PICKUP, client.player);
-                    client.interactionManager.clickSlot(h.syncId, evReal, 0, SlotActionType.PICKUP, client.player);
+                    client.gameMode.handleInventoryMouseClick(h.containerId, nReal, 0, ClickType.PICKUP, client.player);
+                    client.gameMode.handleInventoryMouseClick(h.containerId, evReal, 0, ClickType.PICKUP, client.player);
                 }
-                inv.setStack(ev, cur);
-                inv.setStack(first, ItemStack.EMPTY);
+                inv.setItem(ev, cur);
+                inv.setItem(first, ItemStack.EMPTY);
             }
         }
         // 1) Kaynaktan al (imleç = tamamı).
-        client.interactionManager.clickSlot(handlerOf(inv).syncId, srcId, 0, SlotActionType.PICKUP, client.player);
+        client.gameMode.handleInventoryMouseClick(handlerOf(inv).containerId, srcId, 0, ClickType.PICKUP, client.player);
         int remaining = chestStack.getCount();
         for (int oi = 0; oi < order.size() && remaining > 0; oi++) {
             int destIdx = order.get(oi);
-            ItemStack d = inv.getStack(destIdx).copy();
+            ItemStack d = inv.getItem(destIdx).copy();
             if (!d.isEmpty() && !isSame(d, chestStack)) continue;
             int destReal = VanillaClickExecutor.realSlotId(handlerOf(inv), inv, destIdx);
             if (destReal == -1) continue;
             if (d.isEmpty()) {
-                client.interactionManager.clickSlot(handlerOf(inv).syncId, destReal, 0, SlotActionType.PICKUP, client.player);
+                client.gameMode.handleInventoryMouseClick(handlerOf(inv).containerId, destReal, 0, ClickType.PICKUP, client.player);
                 ItemStack placed = chestStack.copy();
                 placed.setCount(remaining);
-                inv.setStack(destIdx, placed);
+                inv.setItem(destIdx, placed);
                 if (lastTakenDest == -1) lastTakenDest = destIdx;
                 remaining = 0;
             } else {
-                int room = d.getMaxCount() - d.getCount();
+                int room = d.getMaxStackSize() - d.getCount();
                 if (room <= 0) continue;
                 int move = Math.min(room, remaining);
-                client.interactionManager.clickSlot(handlerOf(inv).syncId, destReal, 0, SlotActionType.PICKUP, client.player);
+                client.gameMode.handleInventoryMouseClick(handlerOf(inv).containerId, destReal, 0, ClickType.PICKUP, client.player);
                 ItemStack grown = d.copy();
                 grown.setCount(d.getCount() + move);
-                inv.setStack(destIdx, grown);
+                inv.setItem(destIdx, grown);
                 remaining -= move;
                 if (lastTakenDest == -1) lastTakenDest = destIdx;
             }
         }
         if (remaining > 0) {
             // Sıra doldu: kalanı kaynağa iade et (imleç BOŞ kalır).
-            client.interactionManager.clickSlot(handlerOf(inv).syncId, srcId, 0, SlotActionType.PICKUP, client.player);
+            client.gameMode.handleInventoryMouseClick(handlerOf(inv).containerId, srcId, 0, ClickType.PICKUP, client.player);
             BHSDebug.log("TIDY yer-yok (kalan x" + remaining + " iade)");
             return false;
         }
@@ -288,7 +287,7 @@ public final class TidyCollect {
 
     // Ön-kontrol: sıra toplam kapasitesi yetmiyorsa HİÇ paket gitmez
     // (al-geri-ver flicker'ı olmaz). Evict durumu dahil edilir.
-    private static boolean hasRoom(PlayerInventory inv, ItemStack stack, int anchor,
+    private static boolean hasRoom(Inventory inv, ItemStack stack, int anchor,
                                    List<Integer> order, boolean forceAnchor) {
         try {
             int need = stack.getCount();
@@ -297,7 +296,7 @@ public final class TidyCollect {
             int first = order.get(0);
             boolean freed = false;
             if (forceAnchor) {
-                ItemStack cur = inv.getStack(first);
+                ItemStack cur = inv.getItem(first);
                 if (!cur.isEmpty() && !isSame(cur, stack)) {
                     // takeStackIntoOrder ile AYNI plan: önce hotbar içi, olmazsa sıradaki ilk boş.
                     int plan = first < 9 ? VanillaClickExecutor.planEvictWithinHotbar(inv, first) : -2;
@@ -305,7 +304,7 @@ public final class TidyCollect {
                         evIdx = plan;
                     } else {
                         for (int oi = 1; oi < order.size(); oi++) {
-                            if (inv.getStack(order.get(oi)).isEmpty()) {
+                            if (inv.getItem(order.get(oi)).isEmpty()) {
                                 evIdx = order.get(oi);
                                 break;
                             }
@@ -319,9 +318,9 @@ public final class TidyCollect {
             for (int oi = 0; oi < order.size(); oi++) {
                 int idx = order.get(oi);
                 if (idx == evIdx) continue;
-                ItemStack d = (idx == first && freed) ? ItemStack.EMPTY : inv.getStack(idx);
-                if (d.isEmpty()) cap += stack.getMaxCount();
-                else if (isSame(d, stack)) cap += Math.max(0, d.getMaxCount() - d.getCount());
+                ItemStack d = (idx == first && freed) ? ItemStack.EMPTY : inv.getItem(idx);
+                if (d.isEmpty()) cap += stack.getMaxStackSize();
+                else if (isSame(d, stack)) cap += Math.max(0, d.getMaxStackSize() - d.getCount());
                 if (cap >= need) return true;
             }
             return cap >= need;
@@ -330,16 +329,16 @@ public final class TidyCollect {
         }
     }
 
-    private static ScreenHandler handlerOf(PlayerInventory inv) {
-        MinecraftClient client = MinecraftClient.getInstance();
-        return client == null || client.player == null ? null : client.player.currentScreenHandler;
+    private static AbstractContainerMenu handlerOf(Inventory inv) {
+        Minecraft client = Minecraft.getInstance();
+        return client == null || client.player == null ? null : client.player.containerMenu;
     }
 
     // Sıra içinde ilk BOŞ (fromOi'den itibaren).
-    private static int firstEmptyInOrder(PlayerInventory inv, List<Integer> order, int fromOi) {
+    private static int firstEmptyInOrder(Inventory inv, List<Integer> order, int fromOi) {
         for (int oi = fromOi; oi < order.size(); oi++) {
             int idx = order.get(oi);
-            if (inv.getStack(idx).isEmpty()) return idx;
+            if (inv.getItem(idx).isEmpty()) return idx;
         }
         return -1;
     }
@@ -348,15 +347,15 @@ public final class TidyCollect {
         return lastTakenDest;
     }
 
-    public static void tellFull(MinecraftClient client) {
+    public static void tellFull(Minecraft client) {
         try {
             long now = System.currentTimeMillis();
             if (now - lastFullMsgMs < 10000) return;
             lastFullMsgMs = now;
             if (client.player == null) return;
-            client.player.sendMessage(
-                net.minecraft.text.Text.translatable("betterhotbarswap.msg.no_room")
-                    .formatted(net.minecraft.util.Formatting.RED),
+            client.player.displayClientMessage(
+                net.minecraft.network.chat.Component.translatable("betterhotbarswap.msg.no_room")
+                    .withStyle(net.minecraft.ChatFormatting.RED),
                 false);
         } catch (Exception ignored) {
         }
@@ -365,7 +364,7 @@ public final class TidyCollect {
     private static boolean isSame(ItemStack a, ItemStack b) {
         if (a == null || b == null || a.isEmpty() || b.isEmpty()) return false;
         if (a.getItem() != b.getItem()) return false;
-        return ItemStack.areItemsAndComponentsEqual(a, b);
+        return ItemStack.isSameItemSameComponents(a, b);
     }
 
     public static String slotName(int idx) {

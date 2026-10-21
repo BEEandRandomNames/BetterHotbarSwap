@@ -2,12 +2,12 @@ package com.betterhotbarswap.client.input;
 
 import com.betterhotbarswap.BetterHotbarSwap;
 import com.betterhotbarswap.client.debug.BHSDebug;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.item.ItemStack;
-import net.minecraft.screen.ScreenHandler;
-import net.minecraft.screen.slot.Slot;
-import net.minecraft.screen.slot.SlotActionType;
+import net.minecraft.client.Minecraft;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.ItemStack;
 
 // Shift + Kısayol v7: burst (BurstTakes) üretir, burası doğrular/yakınsar.
 // SETTLE (3 sabit tick) + tick-başına plan adımı (output-drain, evict,
@@ -17,7 +17,7 @@ public final class ShiftBulkQuickMove {
     private ShiftBulkQuickMove() {
     }
 
-    private static ScreenHandler handler;
+    private static AbstractContainerMenu handler;
     private static Slot slot;
     private static int hotbarIndex;
     private static ItemStack anchor = ItemStack.EMPTY;
@@ -53,13 +53,13 @@ public final class ShiftBulkQuickMove {
         anchor = ItemStack.EMPTY;
     }
 
-    public static void start(ScreenHandler h, Slot focusedSlot, int hb, ItemStack anchorStack) {
+    public static void start(AbstractContainerMenu h, Slot focusedSlot, int hb, ItemStack anchorStack) {
         start(h, focusedSlot, hb, anchorStack, 0);
     }
 
-    public static void start(ScreenHandler h, Slot focusedSlot, int hb, ItemStack anchorStack, int pressTakes) {
-        MinecraftClient client = MinecraftClient.getInstance();
-        if (client == null || client.player == null || client.interactionManager == null) return;
+    public static void start(AbstractContainerMenu h, Slot focusedSlot, int hb, ItemStack anchorStack, int pressTakes) {
+        Minecraft client = Minecraft.getInstance();
+        if (client == null || client.player == null || client.gameMode == null) return;
         int slotId = VanillaClickExecutor.resolveSlotId(h, focusedSlot);
         if (slotId < 0 || slotId >= h.slots.size()) {
             BHSDebug.log("SHIFT_BULK-QM abort (NOMAP)");
@@ -86,30 +86,30 @@ public final class ShiftBulkQuickMove {
         BHSDebug.log("SHIFT_BULK-QM arm -> hb" + (hb + 1) + " " + shortStack(anchor));
     }
 
-    public static void onTick(MinecraftClient client) {
+    public static void onTick(Minecraft client) {
         if (handler == null) return;
-        if (client == null || client.player == null || client.interactionManager == null) {
+        if (client == null || client.player == null || client.gameMode == null) {
             cancel();
             return;
         }
-        if (client.player.currentScreenHandler != handler) {
+        if (client.player.containerMenu != handler) {
             cancel();
             return;
         }
-        PlayerInventory inv0 = client.player.getInventory();
-        if (!handler.getCursorStack().isEmpty()) {
+        Inventory inv0 = client.player.getInventory();
+        if (!handler.getCarried().isEmpty()) {
             // İmleç kurtarma (SADECE bulk sırasında): en yakın boşa yerleştir
             // + DUR. Kullanıcının elindeki de olsa en güvenli yer boş slottur;
             // sessizce imleçte bırakmaktan iyidir. Boş yoksa dokunulmaz.
-            ItemStack cur = handler.getCursorStack().copy();
+            ItemStack cur = handler.getCarried().copy();
             // "0" modunda hotbar'a dokunulmaz: main ilk-boş.
             int empty = hotbarIndex == 9 ? firstEmptyMain(inv0)
                 : nearestEmptyHotbar(inv0, hotbarIndex);
             if (empty == -1 && hotbarIndex != 9) empty = firstEmptyMain(inv0);
             int emptyReal = empty == -1 ? -1 : VanillaClickExecutor.realSlotId(handler, inv0, empty);
             if (emptyReal != -1) {
-                client.interactionManager.clickSlot(handler.syncId, emptyReal, 0, SlotActionType.PICKUP, client.player);
-                inv0.setStack(empty, cur);
+                client.gameMode.handleInventoryMouseClick(handler.containerId, emptyReal, 0, ClickType.PICKUP, client.player);
+                inv0.setItem(empty, cur);
                 BHSDebug.log("SHIFT_BULK-QM imlec-kurtarma x" + cur.getCount() + " -> " + slotName(empty));
                 finish("imlec-kurtarma");
             } else {
@@ -134,7 +134,7 @@ public final class ShiftBulkQuickMove {
                 return;
             }
         }
-        PlayerInventory inv = client.player.getInventory();
+        Inventory inv = client.player.getInventory();
 
         if (!settled) {
             int nowTotal = totalOf(inv, anchor);
@@ -160,7 +160,7 @@ public final class ShiftBulkQuickMove {
         // sonsuz döngüye girme, bitir (hangi mekanizma takılırsa takılsın).
         String progressKey = null;
         try {
-            progressKey = inv.getStack(hotbarIndex).getCount() + ":" + totalOf(inv, anchor);
+            progressKey = inv.getItem(hotbarIndex).getCount() + ":" + totalOf(inv, anchor);
         } catch (Exception ignored) {
         }
         if (progressKey != null) {
@@ -176,10 +176,10 @@ public final class ShiftBulkQuickMove {
             }
         }
 
-        int max = Math.max(1, anchor.getMaxCount());
+        int max = Math.max(1, anchor.getMaxStackSize());
 
         // (a) Output'ta kalan varsa tek alım (bulk yerleşimi: forcePriority).
-        ItemStack out = slot.getStack();
+        ItemStack out = slot.getItem();
         if (!out.isEmpty() && keyOf(out).equals(itemKey)) {
             boolean ok = VanillaClickExecutor.assignSlotToHotbar(handler, slot, hotbarIndex, false, true);
             if (ok) {
@@ -202,7 +202,7 @@ public final class ShiftBulkQuickMove {
             return;
         }
 
-        ItemStack targetStack = inv.getStack(hotbarIndex).copy();
+        ItemStack targetStack = inv.getItem(hotbarIndex).copy();
         int targetRealId = VanillaClickExecutor.realSlotId(handler, inv, hotbarIndex);
         if (targetRealId == -1) {
             finish("slot-gitti");
@@ -220,9 +220,9 @@ public final class ShiftBulkQuickMove {
             boolean done = false;
             int emptyHb = nearestEmptyHotbar(inv, hotbarIndex);
             if (emptyHb != -1) {
-                client.interactionManager.clickSlot(handler.syncId, targetRealId, emptyHb, SlotActionType.SWAP, client.player);
-                inv.setStack(emptyHb, targetStack);
-                inv.setStack(hotbarIndex, ItemStack.EMPTY);
+                client.gameMode.handleInventoryMouseClick(handler.containerId, targetRealId, emptyHb, ClickType.SWAP, client.player);
+                inv.setItem(emptyHb, targetStack);
+                inv.setItem(hotbarIndex, ItemStack.EMPTY);
                 actions++;
                 BHSDebug.log("SHIFT_BULK-QM evict hb" + (hotbarIndex + 1) + " -> hb" + (emptyHb + 1));
                 done = true;
@@ -234,9 +234,9 @@ public final class ShiftBulkQuickMove {
                     finish("yer-yok");
                     return;
                 }
-                client.interactionManager.clickSlot(handler.syncId, mainRealId, hotbarIndex, SlotActionType.SWAP, client.player);
-                inv.setStack(mainEmpty, targetStack);
-                inv.setStack(hotbarIndex, ItemStack.EMPTY);
+                client.gameMode.handleInventoryMouseClick(handler.containerId, mainRealId, hotbarIndex, ClickType.SWAP, client.player);
+                inv.setItem(mainEmpty, targetStack);
+                inv.setItem(hotbarIndex, ItemStack.EMPTY);
                 actions++;
                 BHSDebug.log("SHIFT_BULK-QM evict hb" + (hotbarIndex + 1) + " -> m" + mainEmpty);
                 done = true;
@@ -253,7 +253,7 @@ public final class ShiftBulkQuickMove {
             int bestCount = 0;
             for (int i = 0; i < 36; i++) {
                 if (i == hotbarIndex) continue;
-                ItemStack s = inv.getStack(i);
+                ItemStack s = inv.getItem(i);
                 if (s.isEmpty() || s.getCount() <= 0 || !isSameStackable(s, anchor)) continue;
                 if (s.getCount() > bestCount) {
                     bestCount = s.getCount();
@@ -261,7 +261,7 @@ public final class ShiftBulkQuickMove {
                 }
             }
             if (best != -1) {
-                ItemStack moving = inv.getStack(best).copy();
+                ItemStack moving = inv.getItem(best).copy();
                 if (moving.isEmpty() || moving.getCount() <= 0) {
                     finish("hayalet-kaynak");
                     return;
@@ -272,18 +272,18 @@ public final class ShiftBulkQuickMove {
                         finish("slot-gitti");
                         return;
                     }
-                    client.interactionManager.clickSlot(handler.syncId, targetRealId, best, SlotActionType.SWAP, client.player);
+                    client.gameMode.handleInventoryMouseClick(handler.containerId, targetRealId, best, ClickType.SWAP, client.player);
                 } else {
                     int srcRealId = VanillaClickExecutor.realSlotId(handler, inv, best);
                     if (srcRealId == -1) {
                         finish("slot-gitti");
                         return;
                     }
-                    client.interactionManager.clickSlot(handler.syncId, srcRealId, hotbarIndex, SlotActionType.SWAP, client.player);
+                    client.gameMode.handleInventoryMouseClick(handler.containerId, srcRealId, hotbarIndex, ClickType.SWAP, client.player);
                 }
                 ItemStack moved = moving;
-                inv.setStack(best, ItemStack.EMPTY);
-                inv.setStack(hotbarIndex, moved);
+                inv.setItem(best, ItemStack.EMPTY);
+                inv.setItem(hotbarIndex, moved);
                 actions++;
                 BHSDebug.log("SHIFT_BULK-QM place x" + moved.getCount() + " -> hb" + (hotbarIndex + 1));
                 targetStack = moved.copy();
@@ -303,20 +303,20 @@ public final class ShiftBulkQuickMove {
             for (int pass = 0; pass < 2 && !topped; pass++) {
                 for (int idx : topOrder) {
                     if (idx == hotbarIndex) continue;
-                    ItemStack s = inv.getStack(idx);
+                    ItemStack s = inv.getItem(idx);
                     if (s.isEmpty() || s.getCount() <= 0 || !isSameStackable(s, anchor)) continue;
-                    boolean partial = s.getCount() < s.getMaxCount();
+                    boolean partial = s.getCount() < s.getMaxStackSize();
                     if ((pass == 0) != partial) continue;
                     if (s.getCount() > space) continue;
                     int srcRealId = VanillaClickExecutor.realSlotId(handler, inv, idx);
                     if (srcRealId == -1) continue;
                     int beforeCount = s.getCount();
-                    client.interactionManager.clickSlot(handler.syncId, srcRealId, 0, SlotActionType.PICKUP, client.player);
-                    client.interactionManager.clickSlot(handler.syncId, targetRealId, 0, SlotActionType.PICKUP, client.player);
+                    client.gameMode.handleInventoryMouseClick(handler.containerId, srcRealId, 0, ClickType.PICKUP, client.player);
+                    client.gameMode.handleInventoryMouseClick(handler.containerId, targetRealId, 0, ClickType.PICKUP, client.player);
                     ItemStack t = targetStack.copy();
                     t.setCount(targetStack.getCount() + beforeCount);
-                    inv.setStack(hotbarIndex, t);
-                    inv.setStack(idx, ItemStack.EMPTY);
+                    inv.setItem(hotbarIndex, t);
+                    inv.setItem(idx, ItemStack.EMPTY);
                     actions++;
                     BHSDebug.log("SHIFT_BULK-QM topup +" + beforeCount + " -> hb" + (hotbarIndex + 1));
                     targetStack = t;
@@ -337,10 +337,10 @@ public final class ShiftBulkQuickMove {
             java.util.List<Integer> order = collectOrder(hotbarIndex);
             for (int oi = 0; oi < order.size() && !bubbled; oi++) {
             int emptyIdx = order.get(oi);
-            if (!inv.getStack(emptyIdx).isEmpty()) continue;
+            if (!inv.getItem(emptyIdx).isEmpty()) continue;
             for (int si = oi + 1; si < order.size() && !bubbled; si++) {
                 int srcIdx = order.get(si);
-                ItemStack s = inv.getStack(srcIdx);
+                ItemStack s = inv.getItem(srcIdx);
                 if (s.isEmpty() || s.getCount() <= 0 || !isSameStackable(s, anchor)) continue;
                 int emptyRealId = VanillaClickExecutor.realSlotId(handler, inv, emptyIdx);
                 int srcRealId = VanillaClickExecutor.realSlotId(handler, inv, srcIdx);
@@ -350,18 +350,18 @@ public final class ShiftBulkQuickMove {
                 // bütün-yığın her zaman sığar, imleç-güvenli).
                 ItemStack movingSrc = s.copy();
                 if (emptyIdx < 9 && srcIdx < 9) {
-                    client.interactionManager.clickSlot(handler.syncId, srcRealId, emptyIdx, SlotActionType.SWAP, client.player);
+                    client.gameMode.handleInventoryMouseClick(handler.containerId, srcRealId, emptyIdx, ClickType.SWAP, client.player);
                 } else if (emptyIdx < 9) {
-                    client.interactionManager.clickSlot(handler.syncId, srcRealId, emptyIdx, SlotActionType.SWAP, client.player);
+                    client.gameMode.handleInventoryMouseClick(handler.containerId, srcRealId, emptyIdx, ClickType.SWAP, client.player);
                 } else if (srcIdx < 9) {
-                    client.interactionManager.clickSlot(handler.syncId, emptyRealId, srcIdx, SlotActionType.SWAP, client.player);
+                    client.gameMode.handleInventoryMouseClick(handler.containerId, emptyRealId, srcIdx, ClickType.SWAP, client.player);
                 } else {
-                    client.interactionManager.clickSlot(handler.syncId, srcRealId, 0, SlotActionType.PICKUP, client.player);
-                    client.interactionManager.clickSlot(handler.syncId, emptyRealId, 0, SlotActionType.PICKUP, client.player);
+                    client.gameMode.handleInventoryMouseClick(handler.containerId, srcRealId, 0, ClickType.PICKUP, client.player);
+                    client.gameMode.handleInventoryMouseClick(handler.containerId, emptyRealId, 0, ClickType.PICKUP, client.player);
                 }
                 ItemStack moved = movingSrc;
-                inv.setStack(emptyIdx, moved);
-                inv.setStack(srcIdx, ItemStack.EMPTY);
+                inv.setItem(emptyIdx, moved);
+                inv.setItem(srcIdx, ItemStack.EMPTY);
                 actions++;
                 BHSDebug.log("SHIFT_BULK-QM yerles " + slotName(srcIdx) + " -> " + slotName(emptyIdx));
                 acted = true;
@@ -378,11 +378,11 @@ public final class ShiftBulkQuickMove {
         return idx < 9 ? "hb" + (idx + 1) : "m" + idx;
     }
 
-    private static int govTotal(MinecraftClient client) {
+    private static int govTotal(Minecraft client) {
         try {
             int total = 0;
             for (int id : govInputIds) {
-                ItemStack s = handler.getSlot(id).getStack();
+                ItemStack s = handler.getSlot(id).getItem();
                 if (!s.isEmpty()) total += s.getCount();
             }
             return total;
@@ -397,15 +397,15 @@ public final class ShiftBulkQuickMove {
     }
 
     // Takılma bildirimi: guard sessiz kalmasın. 10 sn'de bir (mash-spam yok).
-    private static void notifyStall(MinecraftClient client) {
+    private static void notifyStall(Minecraft client) {
         try {
             long now = System.currentTimeMillis();
             if (now - lastStallMsgMs < 10000) return;
             lastStallMsgMs = now;
             if (client.player == null) return;
-            client.player.sendMessage(
-                net.minecraft.text.Text.translatable("betterhotbarswap.msg.stalled")
-                    .formatted(net.minecraft.util.Formatting.RED),
+            client.player.displayClientMessage(
+                net.minecraft.network.chat.Component.translatable("betterhotbarswap.msg.stalled")
+                    .withStyle(net.minecraft.ChatFormatting.RED),
                 false);
         } catch (Exception ignored) {
         }
@@ -414,7 +414,7 @@ public final class ShiftBulkQuickMove {
     private static String outputKey() {
         if (slot == null) return "no-slot";
         try {
-            return keyOf(slot.getStack());
+            return keyOf(slot.getItem());
         } catch (Exception e) {
             return "err";
         }
@@ -430,11 +430,11 @@ public final class ShiftBulkQuickMove {
         return order;
     }
 
-    private static int nearestEmptyHotbar(PlayerInventory inv, int target) {
+    private static int nearestEmptyHotbar(Inventory inv, int target) {
         int best = -1;
         int bestDist = Integer.MAX_VALUE;
         for (int i = 0; i < 9; i++) {
-            if (i == target || !inv.getStack(i).isEmpty()) continue;
+            if (i == target || !inv.getItem(i).isEmpty()) continue;
             int dist = Math.abs(i - target);
             if (dist < bestDist) {
                 bestDist = dist;
@@ -444,15 +444,15 @@ public final class ShiftBulkQuickMove {
         return best;
     }
 
-    private static int firstEmptyMain(PlayerInventory inv) {
-        for (int i = 9; i < 36; i++) if (inv.getStack(i).isEmpty()) return i;
+    private static int firstEmptyMain(Inventory inv) {
+        for (int i = 9; i < 36; i++) if (inv.getItem(i).isEmpty()) return i;
         return -1;
     }
 
-    private static int totalOf(PlayerInventory inv, ItemStack anchorStack) {
+    private static int totalOf(Inventory inv, ItemStack anchorStack) {
         int total = 0;
         for (int i = 0; i < 36; i++) {
-            ItemStack s = inv.getStack(i);
+            ItemStack s = inv.getItem(i);
             if (!s.isEmpty() && isSameStackable(s, anchorStack)) total += s.getCount();
         }
         return total;
@@ -461,13 +461,13 @@ public final class ShiftBulkQuickMove {
     private static boolean isSameStackable(ItemStack a, ItemStack b) {
         if (a.isEmpty() || b.isEmpty()) return false;
         if (a.getItem() != b.getItem()) return false;
-        return ItemStack.areItemsAndComponentsEqual(a, b);
+        return ItemStack.isSameItemSameComponents(a, b);
     }
 
     private static String keyOf(ItemStack s) {
         if (s == null || s.isEmpty()) return "empty";
         try {
-            return s.getItem().toString() + "|" + s.getComponentChanges();
+            return s.getItem().toString() + "|" + s.getComponentsPatch();
         } catch (Exception e) {
             return s.getItem().toString();
         }
@@ -476,7 +476,7 @@ public final class ShiftBulkQuickMove {
     private static String shortStack(ItemStack s) {
         if (s == null || s.isEmpty()) return "bos";
         try {
-            return s.getName().getString() + "x" + s.getCount();
+            return s.getHoverName().getString() + "x" + s.getCount();
         } catch (Exception e) {
             return "?";
         }

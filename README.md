@@ -1,21 +1,42 @@
 # BetterHotbarSwap
 
-BetterHotbarSwap is a Fabric 1.20.1 client-side inventory quality-of-life mod.
+Makes Minecraft's hotkey assignment system more functional and smarter.
 
-The first development target is a server-friendly client-only mode: the mod does not require a server installation and expresses its behavior through vanilla slot clicks whenever possible. Optional enhanced server support can be added later without replacing the core planning logic.
+A client-side Fabric mod. It needs no server install: everything is done with vanilla slot clicks, so it also works on multiplayer servers and with modded containers.
 
-## Current Scope
+## Features
 
-- Fabric 1.20.1
-- Client-side hotbar key detection using Minecraft's remappable hotbar keybinds
-- Safe vanilla click planning for hotbar assignment
-- Crafting/output quick-swap detection with conservative fallbacks
-- Hotbar Priority behavior for displaced hotbar items
-- Shift + Hotbar Key + Left Click container pickup
-- JSON config and an in-game settings keybind
+- **Send crafting results to any hotbar slot with a hotkey, even an occupied one.** Hover the result of any crafting block (crafting table, furnace, stonecutter, modded ones too) and press a hotbar key. The old item is not lost; it stays in your hotbar.
+- **Hotbar Priority:** a displaced item first stacks with the same item in your hotbar, otherwise moves to the nearest empty hotbar slot.
+- **Assigned Crafting:** Shift + hotkey on a crafting result takes everything you can craft at once.
+- **Tidy Collecting:** in chests, hold Shift + a hotkey and Shift-click items; they fill from that slot to the right, never to the left.
+- **Saved toolbars in every game mode:** save and load your whole layout (hotbar, inventory, offhand). Items are only moved, never created.
+- **Offhand support**, mouse-button hotkeys, 11 languages.
 
-## Safety Rules
+## Controls
 
-- If the current screen, slot, cursor, or inventory state is ambiguous, the mod does nothing.
-- The mod avoids direct inventory mutation in client-only mode.
-- The mod prefers vanilla slot click actions so modded containers keep their own server-side behavior.
+| Key | Action |
+|---|---|
+| Hotbar keys (1-9) | Assign the hovered item to that slot |
+| Shift + hotbar key | Assigned Crafting / Tidy Collecting |
+| N + hotbar key | Save a toolbar |
+| M + hotbar key | Load a toolbar |
+| H | Open the toolbar list |
+
+All keys can be changed in Controls. Settings are available through Mod Menu or a bindable key.
+
+## Supported versions
+
+Minecraft 1.20.1 and 1.20.2 with Fabric Loader and Fabric API. Ports to newer versions are in progress; each version lives on its own `mc/<version>` branch.
+
+## Building
+
+```
+./gradlew build
+```
+
+The jar is written to `build/libs/`.
+
+## License
+
+[MIT](LICENSE)

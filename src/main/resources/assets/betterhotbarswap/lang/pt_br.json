@@ -35,5 +35,8 @@
   "betterhotbarswap.msg.stalled": "A coleta travou — esvazie o cursor e reabra a tela.",
   "betterhotbarswap.toolbar.saved": "Salvo",
   "modmenu.summaryTranslation.betterhotbarswap": "Torna o sistema de atribuição de atalhos do Minecraft mais funcional e inteligente.",
-  "modmenu.descriptionTranslation.betterhotbarswap": "Torna o sistema de atribuição de atalhos do Minecraft mais funcional e inteligente. Além disso, permite uma forma totalmente nova de usar os atalhos."
+  "modmenu.descriptionTranslation.betterhotbarswap": "Torna o sistema de atribuição de atalhos do Minecraft mais funcional e inteligente. Além disso, permite uma forma totalmente nova de usar os atalhos.",
+  "betterhotbarswap.update.title": "Atualização do %s",
+  "betterhotbarswap.update.message": "O %1$s %2$s foi lançado. Deseja atualizar o mod?",
+  "betterhotbarswap.update.later": "Agora não"
 }

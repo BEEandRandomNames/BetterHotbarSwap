@@ -15,7 +15,7 @@ import com.betterhotbarswap.client.debug.BHSDebug;
 public final class BetterHotbarSwapClient implements ClientModInitializer {
     // Açılış damgası: HANGİ build'in çalıştığını latest.log'dan kanıtlar
     // (bayat-build testlerini bitirir). Her dağıtımdan önce BUMP edilir.
-    private static final String BUILD_ID = "2026-10-21-x";
+    private static final String BUILD_ID = "2026-10-21-1.20.4d";
     private static KeyBinding settingsKey;
     private static KeyBinding hotbar10Key;
     private static KeyBinding toolbarsKey;
@@ -44,6 +44,7 @@ public final class BetterHotbarSwapClient implements ClientModInitializer {
     public void onInitializeClient() {
         com.betterhotbarswap.BetterHotbarSwap.LOGGER.info("[BHS] init build={}", BUILD_ID);
         BHSConfig.load();
+        UpdateChecker.start();
         settingsKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
             "key.betterhotbarswap.settings",
             InputUtil.Type.KEYSYM,
@@ -90,5 +91,6 @@ public final class BetterHotbarSwapClient implements ClientModInitializer {
             client.setScreen(new com.betterhotbarswap.config.BHSToolbarScreen(client.currentScreen));
         }
         com.betterhotbarswap.client.input.ShiftBulkQuickMove.onTick(client);
+        UpdateChecker.onTick(client);
     }
 }

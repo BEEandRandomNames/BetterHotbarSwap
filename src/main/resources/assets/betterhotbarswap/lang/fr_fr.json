@@ -35,5 +35,8 @@
   "betterhotbarswap.msg.stalled": "Ramassage bloqué — vide ton curseur et rouvre l'écran.",
   "betterhotbarswap.toolbar.saved": "Enregistré",
   "modmenu.summaryTranslation.betterhotbarswap": "Rend le système d'attribution des raccourcis de Minecraft plus pratique et plus intelligent.",
-  "modmenu.descriptionTranslation.betterhotbarswap": "Rend le système d'attribution des raccourcis de Minecraft plus pratique et plus intelligent. Il permet aussi une toute nouvelle façon d'utiliser les raccourcis."
+  "modmenu.descriptionTranslation.betterhotbarswap": "Rend le système d'attribution des raccourcis de Minecraft plus pratique et plus intelligent. Il permet aussi une toute nouvelle façon d'utiliser les raccourcis.",
+  "betterhotbarswap.update.title": "Mise à jour de %s",
+  "betterhotbarswap.update.message": "%1$s %2$s est disponible. Voulez-vous mettre à jour le mod ?",
+  "betterhotbarswap.update.later": "Pas maintenant"
 }

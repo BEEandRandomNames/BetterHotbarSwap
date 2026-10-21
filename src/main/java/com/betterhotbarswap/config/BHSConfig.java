@@ -22,6 +22,7 @@ public final class BHSConfig {
     public static boolean debugEnabled = false;
     public static boolean tidyCollect = true;
     public static boolean survivalToolbars = true;
+    public static boolean updateCheck = true;
 
     private BHSConfig() {
     }
@@ -35,6 +36,7 @@ public final class BHSConfig {
                 debugEnabled = getBoolean(json, "debugEnabled", false);
                 tidyCollect = getBoolean(json, "tidyCollect", true);
                 survivalToolbars = getBoolean(json, "survivalToolbars", true);
+                updateCheck = getBoolean(json, "updateCheck", true);
             } catch (Exception exception) {
                 BetterHotbarSwap.LOGGER.warn("Failed to load config, using defaults.", exception);
             }
@@ -49,6 +51,7 @@ public final class BHSConfig {
         json.addProperty("debugEnabled", debugEnabled);
         json.addProperty("tidyCollect", tidyCollect);
         json.addProperty("survivalToolbars", survivalToolbars);
+        json.addProperty("updateCheck", updateCheck);
 
         try {
             Files.createDirectories(CONFIG_PATH.getParent());

@@ -35,5 +35,8 @@
   "betterhotbarswap.msg.stalled": "Raccolta bloccata — svuota il cursore e riapri la schermata.",
   "betterhotbarswap.toolbar.saved": "Salvato",
   "modmenu.summaryTranslation.betterhotbarswap": "Rende il sistema di assegnazione dei tasti rapidi di Minecraft più funzionale e intelligente.",
-  "modmenu.descriptionTranslation.betterhotbarswap": "Rende il sistema di assegnazione dei tasti rapidi di Minecraft più funzionale e intelligente. Inoltre permette un modo del tutto nuovo di usare i tasti rapidi."
+  "modmenu.descriptionTranslation.betterhotbarswap": "Rende il sistema di assegnazione dei tasti rapidi di Minecraft più funzionale e intelligente. Inoltre permette un modo del tutto nuovo di usare i tasti rapidi.",
+  "betterhotbarswap.update.title": "Aggiornamento di %s",
+  "betterhotbarswap.update.message": "È disponibile %1$s %2$s. Vuoi aggiornare la mod?",
+  "betterhotbarswap.update.later": "Non ora"
 }

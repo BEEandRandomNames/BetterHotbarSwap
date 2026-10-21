@@ -302,13 +302,11 @@ public final class HotbarInputController {
                 return true;
             }
             // Mod ARMED, ama fare alınabilir depo yığınında değil (boş sandık
-            // slotu / oyuncu slotu): vanilla takası YUTULUR. Yoksa hareketi
-            // başlatan basış hotbar[N] eşyasını sandığa iter / envanteri karıştırır.
-            // "0" (main-only) bu kuraldan muaf: kendi akışına devam eder.
-            if (hotbarIndex <= 8) {
-                if (!repeat) BHSDebug.log("TIDY armed -> vanilla takas yutuldu " + BHSDebug.describeSlot(focusedSlot, MinecraftClient.getInstance().player));
-                return true;
-            }
+            // slotu / oyuncu slotu): tuş YUTULUR. Yoksa hareketi başlatan basış
+            // hotbar[N] eşyasını sandığa iter / envanteri karıştırır. "0"/10. slot
+            // DAHİL (bug #43: muafken Shift+10 hotbar eşyasını envantere taşıyordu).
+            if (!repeat) BHSDebug.log("TIDY armed -> tus yutuldu " + BHSDebug.describeSlot(focusedSlot, MinecraftClient.getInstance().player));
+            return true;
         }
         if (SlotClassifier.isAssignableSlot(focusedSlot, MinecraftClient.getInstance().player)) {
             // Shift + Kısayol bulk: output slotta Shift ile basılınca ilk alım +

@@ -81,19 +81,6 @@ sprite(stone, 24, 9);
 // Fare üstünde (vanilla hover beyazlaşması): vanilla gibi SADECE 16x16 eşya alanı, hafif %30.
 for (let y = 9; y <= 24; y++) for (let x = 24; x <= 39; x++) blend(x, y, '#FFFFFF', 0.30);
 
-// "2" klavye tuşu, YARIM BASILI (kullanıcı seçimi A): yüz 2px aşağıda, kısalmış etek,
-// üstte tuşa inen ince vuruş izleri. (Derin basma + ışık halkası, parmak ve darbe
-// çizgisi denendi; kullanıcı bunu seçti.)
-const DIGIT2 = ['.####.', '##..##', '....##', '...##.', '..##..', '.##...', '######'];
-rect(48, 8, 59, 8, '#1A1A1A'); rect(48, 25, 59, 25, '#1A1A1A'); rect(47, 9, 47, 24, '#1A1A1A'); rect(60, 9, 60, 24, '#1A1A1A');
-rect(48, 9, 59, 24, '#6E6E6E');                 // kuyu (tuşun indiği boşluk)
-rect(48, 23, 59, 24, '#4E4E4E');                // kısalmış alt etek
-rect(48, 11, 48, 22, '#8A8A8A');                // sol yan
-rect(49, 11, 58, 21, '#DCDCDC');                // üst yüz (basılınca hafif gölgede)
-rect(49, 11, 58, 11, '#F0F0F0'); rect(49, 11, 49, 21, '#E8E8E8');
-rect(49, 22, 58, 22, '#A8A8A8');                // yüz-etek kırılımı
-art(51, 13, DIGIT2, { '#': '#1E1E1E' });
-for (const [x, y] of [[49, 4], [50, 5], [51, 6], [53, 3], [53, 4], [53, 5], [54, 3], [54, 4], [54, 5], [58, 4], [57, 5], [56, 6]]) set(x, y, '#3A3A3A');
 
 // Yeşil ok: çıktı -> 2. slot.
 art(28, 30, ['..####..', '..####..', '..####..', '..####..', '########', '.######.', '..####..', '...##...'], { '#': '#3ECF3E' });

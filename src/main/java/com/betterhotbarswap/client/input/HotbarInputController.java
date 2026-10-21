@@ -5,6 +5,9 @@ import com.betterhotbarswap.client.debug.BHSDebug;
 import com.betterhotbarswap.config.BHSConfig;
 import com.betterhotbarswap.mixin.HandledScreenAccessor;
 import net.minecraft.client.KeyMapping;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.input.MouseButtonInfo;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
@@ -89,9 +92,9 @@ public final class HotbarInputController {
             if (client == null || client.player == null) return;
             Inventory inv = client.player.getInventory();
             if (prevSel < 0 || prevSel > 8) return;
-            if (inv.selected != prevSel) {
-                BHSDebug.log("SEL-RESTORE prev=" + prevSel + " cur=" + inv.selected + " -> geri alindi");
-                inv.selected = prevSel;
+            if (inv.getSelectedSlot() != prevSel) {
+                BHSDebug.log("SEL-RESTORE prev=" + prevSel + " cur=" + inv.getSelectedSlot() + " -> geri alindi");
+                inv.setSelectedSlot(prevSel);
                 try {
                     client.player.connection.send(new net.minecraft.network.protocol.game.ServerboundSetCarriedItemPacket(prevSel));
                 } catch (Exception ignored) {}
@@ -125,20 +128,20 @@ public final class HotbarInputController {
         // Sol-el (F) en once: vanilla paritesi (swapHands her seyi yener).
         try {
             if (client != null && client.options != null && client.options.keySwapOffhand != null
-                && client.options.keySwapOffhand.matches(keyCode, scanCode)) return 10;
+                && client.options.keySwapOffhand.matches(new KeyEvent(keyCode, scanCode, 0))) return 10;
         } catch (Exception ignored) {
         }
         // Özel 10. yuva (main-only) önce: açık kullanıcı seçimi her zaman kazanır.
         try {
             net.minecraft.client.KeyMapping hotbar10 = com.betterhotbarswap.client.BetterHotbarSwapClient.getHotbar10Key();
-            if (hotbar10 != null && hotbar10.matches(keyCode, scanCode)) return 9;
+            if (hotbar10 != null && hotbar10.matches(new KeyEvent(keyCode, scanCode, 0))) return 9;
         } catch (Exception ignored) {
         }
         if (client != null && client.options != null && client.options.keyHotbarSlots != null) {
             KeyMapping[] keys = client.options.keyHotbarSlots;
             for (int i = 0; i < keys.length && i < 9; i++) {
                 try {
-                    if (keys[i] != null && keys[i].matches(keyCode, scanCode)) return i;
+                    if (keys[i] != null && keys[i].matches(new KeyEvent(keyCode, scanCode, 0))) return i;
                 } catch (Exception ignored) {
                 }
             }
@@ -153,7 +156,7 @@ public final class HotbarInputController {
     // asla sessiz yutulmaz.
     public static boolean isShiftDown() {
         try {
-            long win = Minecraft.getInstance().getWindow().getWindow();
+            long win = Minecraft.getInstance().getWindow().handle();
             return org.lwjgl.glfw.GLFW.glfwGetKey(win, org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_SHIFT)
                     == org.lwjgl.glfw.GLFW.GLFW_PRESS
                 || org.lwjgl.glfw.GLFW.glfwGetKey(win, org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT_SHIFT)
@@ -182,7 +185,7 @@ public final class HotbarInputController {
         // ilk iş Screen.keyPressed). Yazı yazılıyorsa takas YOK.
         try {
             net.minecraft.client.gui.components.events.GuiEventListener focused = screen.getFocused();
-            if (focused != null && focused.keyPressed(keyCode, scanCode, modifiers)) return true;
+            if (focused != null && focused.keyPressed(new KeyEvent(keyCode, scanCode, modifiers))) return true;
         } catch (Exception ignored) {
         }
         lastHotkey = keyCode;
@@ -207,12 +210,12 @@ public final class HotbarInputController {
     private static int mouseHotbarIndex(Minecraft client, int button) {
         if (client == null || client.options == null) return -1;
         try {
-            if (client.options.keySwapOffhand.matchesMouse(button)) return 10;
+            if (client.options.keySwapOffhand.matchesMouse(new MouseButtonEvent(0, 0, new MouseButtonInfo(button, 0)))) return 10;
             KeyMapping hotbar10 = com.betterhotbarswap.client.BetterHotbarSwapClient.getHotbar10Key();
-            if (hotbar10 != null && hotbar10.matchesMouse(button)) return 9;
+            if (hotbar10 != null && hotbar10.matchesMouse(new MouseButtonEvent(0, 0, new MouseButtonInfo(button, 0)))) return 9;
             KeyMapping[] keys = client.options.keyHotbarSlots;
             for (int i = 0; i < keys.length && i < 9; i++) {
-                if (keys[i] != null && keys[i].matchesMouse(button)) return i;
+                if (keys[i] != null && keys[i].matchesMouse(new MouseButtonEvent(0, 0, new MouseButtonInfo(button, 0)))) return i;
             }
         } catch (Exception ignored) {
         }
@@ -221,7 +224,7 @@ public final class HotbarInputController {
 
     private static boolean handleHotkey(AbstractContainerScreen<?> screen, int keyCode, int hotbarIndex, int modifiers) {
         int prevSel = -1;
-        try { prevSel = Minecraft.getInstance().player.getInventory().selected; } catch (Exception ignored) {}
+        try { prevSel = Minecraft.getInstance().player.getInventory().getSelectedSlot(); } catch (Exception ignored) {}
         // Canlılık kaydı: basılı tuş HER olayda tazelenir (boş slotta gezerken
         // bile). Yoksa TTL dolar, tutuş "taze basış" sanılır, latch'ler ölür.
         // Taze/tekrar ayrımı için ÖNCE okunur.

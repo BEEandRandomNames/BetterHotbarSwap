@@ -9,6 +9,7 @@ import net.minecraft.data.registries.VanillaRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtIo;
+import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.NbtUtils;
 import net.minecraft.util.datafix.DataFixTypes;
 import net.minecraft.world.item.ItemStack;
@@ -75,12 +76,12 @@ public final class ToolbarStorage {
             if (nbt == null) return;
             nbt = DataFixTypes.HOTBAR.updateToCurrentVersion(fixer, nbt, NbtUtils.getDataVersion(nbt, 1343));
             for (int i = 0; i < 9; i++) {
-                ListTag list = nbt.getList(String.valueOf(i), CompoundTag.TAG_COMPOUND);
+                ListTag list = nbt.getListOrEmpty(String.valueOf(i));
                 for (int j = 0; j < Math.min(list.size(), SIZE); j++) {
-                    CompoundTag c = list.getCompound(j);
-                    ItemStack s = ItemStack.parseOptional(lookup, c);
+                    CompoundTag c = list.getCompoundOrEmpty(j);
+                    ItemStack s = ItemStack.OPTIONAL_CODEC.parse(lookup.createSerializationContext(NbtOps.INSTANCE), c).result().orElse(ItemStack.EMPTY);
                     bars[i].set(j, s);
-                    if (s.isEmpty() && c.contains("id") && !"minecraft:air".equals(c.getString("id"))) undecoded[i][j] = c;
+                    if (s.isEmpty() && c.contains("id") && !"minecraft:air".equals(c.getStringOr("id", ""))) undecoded[i][j] = c;
                 }
             }
         } catch (Exception e) {
@@ -97,7 +98,7 @@ public final class ToolbarStorage {
                 ListTag list = new ListTag();
                 for (int j = 0; j < SIZE; j++) {
                     ItemStack s = bars[i].get(j);
-                    list.add(s.isEmpty() && undecoded[i][j] != null ? undecoded[i][j] : s.saveOptional(lookup));
+                    list.add(s.isEmpty() && undecoded[i][j] != null ? undecoded[i][j] : ItemStack.OPTIONAL_CODEC.encodeStart(lookup.createSerializationContext(NbtOps.INSTANCE), s).getOrThrow());
                 }
                 root.put(String.valueOf(i), list);
             }

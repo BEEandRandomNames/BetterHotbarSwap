@@ -7,7 +7,7 @@ import java.util.List;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
@@ -180,7 +180,7 @@ public final class TidyCollect {
             if (!canTake(h, slot)) return false;
             int anchor = HotbarInputController.latchedHotbar();
             inRedirect = true;
-            int prevSel = client.player.getInventory().selected;
+            int prevSel = client.player.getInventory().getSelectedSlot();
             ItemStack pre = slot.getItem().copy();
             resetWall(h);
             boolean ok = takeStackIntoOrder(client, client.player.getInventory(), slot, anchor,
@@ -237,19 +237,19 @@ public final class TidyCollect {
                 // SWAP kuralı: tıklanan slot <-> hotbar[düğme] (düğme 0-8).
                 // Main-anchor (9) SWAP'lanamaz: PICKUP çiftiyle taşınır.
                 if (first < 9 && ev < 9) {
-                    client.gameMode.handleInventoryMouseClick(h.containerId, nReal, ev, ClickType.SWAP, client.player);
+                    client.gameMode.handleContainerInput(h.containerId, nReal, ev, ContainerInput.SWAP, client.player);
                 } else if (first < 9) {
-                    client.gameMode.handleInventoryMouseClick(h.containerId, evReal, first, ClickType.SWAP, client.player);
+                    client.gameMode.handleContainerInput(h.containerId, evReal, first, ContainerInput.SWAP, client.player);
                 } else {
-                    client.gameMode.handleInventoryMouseClick(h.containerId, nReal, 0, ClickType.PICKUP, client.player);
-                    client.gameMode.handleInventoryMouseClick(h.containerId, evReal, 0, ClickType.PICKUP, client.player);
+                    client.gameMode.handleContainerInput(h.containerId, nReal, 0, ContainerInput.PICKUP, client.player);
+                    client.gameMode.handleContainerInput(h.containerId, evReal, 0, ContainerInput.PICKUP, client.player);
                 }
                 inv.setItem(ev, cur);
                 inv.setItem(first, ItemStack.EMPTY);
             }
         }
         // 1) Kaynaktan al (imleç = tamamı).
-        client.gameMode.handleInventoryMouseClick(handlerOf(inv).containerId, srcId, 0, ClickType.PICKUP, client.player);
+        client.gameMode.handleContainerInput(handlerOf(inv).containerId, srcId, 0, ContainerInput.PICKUP, client.player);
         int remaining = chestStack.getCount();
         for (int oi = 0; oi < order.size() && remaining > 0; oi++) {
             int destIdx = order.get(oi);
@@ -258,7 +258,7 @@ public final class TidyCollect {
             int destReal = VanillaClickExecutor.realSlotId(handlerOf(inv), inv, destIdx);
             if (destReal == -1) continue;
             if (d.isEmpty()) {
-                client.gameMode.handleInventoryMouseClick(handlerOf(inv).containerId, destReal, 0, ClickType.PICKUP, client.player);
+                client.gameMode.handleContainerInput(handlerOf(inv).containerId, destReal, 0, ContainerInput.PICKUP, client.player);
                 ItemStack placed = chestStack.copy();
                 placed.setCount(remaining);
                 inv.setItem(destIdx, placed);
@@ -268,7 +268,7 @@ public final class TidyCollect {
                 int room = d.getMaxStackSize() - d.getCount();
                 if (room <= 0) continue;
                 int move = Math.min(room, remaining);
-                client.gameMode.handleInventoryMouseClick(handlerOf(inv).containerId, destReal, 0, ClickType.PICKUP, client.player);
+                client.gameMode.handleContainerInput(handlerOf(inv).containerId, destReal, 0, ContainerInput.PICKUP, client.player);
                 ItemStack grown = d.copy();
                 grown.setCount(d.getCount() + move);
                 inv.setItem(destIdx, grown);
@@ -278,7 +278,7 @@ public final class TidyCollect {
         }
         if (remaining > 0) {
             // Sıra doldu: kalanı kaynağa iade et (imleç BOŞ kalır).
-            client.gameMode.handleInventoryMouseClick(handlerOf(inv).containerId, srcId, 0, ClickType.PICKUP, client.player);
+            client.gameMode.handleContainerInput(handlerOf(inv).containerId, srcId, 0, ContainerInput.PICKUP, client.player);
             BHSDebug.log("TIDY yer-yok (kalan x" + remaining + " iade)");
             return false;
         }
@@ -353,10 +353,9 @@ public final class TidyCollect {
             if (now - lastFullMsgMs < 10000) return;
             lastFullMsgMs = now;
             if (client.player == null) return;
-            client.player.displayClientMessage(
+            client.player.sendSystemMessage(
                 net.minecraft.network.chat.Component.translatable("betterhotbarswap.msg.no_room")
-                    .withStyle(net.minecraft.ChatFormatting.RED),
-                false);
+                    .withStyle(net.minecraft.ChatFormatting.RED));
         } catch (Exception ignored) {
         }
     }

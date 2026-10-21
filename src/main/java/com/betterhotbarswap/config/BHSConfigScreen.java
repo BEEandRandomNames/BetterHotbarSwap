@@ -2,7 +2,7 @@ package com.betterhotbarswap.config;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.KeyMapping;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.components.events.GuiEventListener;
@@ -50,11 +50,11 @@ public final class BHSConfigScreen extends Screen {
                 KeyMapping[] keys = minecraft.options.keyMappings.clone();
                 java.util.Arrays.sort(keys);
                 int row = 0;
-                String last = null;
+                KeyMapping.Category last = null;
                 for (KeyMapping k : keys) {
                     if (!k.getCategory().equals(last)) {
                         last = k.getCategory();
-                        if (last.equals("category.betterhotbarswap")) break;
+                        if (last.equals(com.betterhotbarswap.client.BetterHotbarSwapClient.CATEGORY)) break;
                         row++;
                     }
                     row++;
@@ -90,9 +90,9 @@ public final class BHSConfigScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
-        super.render(context, mouseX, mouseY, delta); // 1.20.2+: Screen.render arka plan + düğmeleri çizer; içerik üstüne
-        context.drawCenteredString(font, title, width / 2, 15, 0xFFFFFF);
+    public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
+        super.extractRenderState(context, mouseX, mouseY, delta); // 26.1+: render -> extractRenderState, renkler ARGB
+        context.centeredText(font, title, width / 2, 15, 0xFFFFFFFF);
     }
 
     @Override

@@ -4,10 +4,13 @@ import com.betterhotbarswap.client.toolbar.SurvivalToolbars;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.KeyMapping;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
@@ -18,7 +21,7 @@ import net.minecraft.world.item.ItemStack;
 // Satır numarası = kayıt yuvası = dünyadaki "Yükle tuşu + o kısayol".
 // Survival'da envanterde OLMAYAN eşyalar kırmızı tonla gösterilir.
 public final class BHSToolbarScreen extends Screen {
-    private static final net.minecraft.resources.ResourceLocation HOTBAR = net.minecraft.resources.ResourceLocation.withDefaultNamespace("hud/hotbar");
+    private static final net.minecraft.resources.Identifier HOTBAR = net.minecraft.resources.Identifier.withDefaultNamespace("hud/hotbar");
     private static final int HOTBAR_W = 182;
     private static final int ROW_H = 24;
     private static final int BTN_W = 50;
@@ -68,28 +71,29 @@ public final class BHSToolbarScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
-        super.render(context, mouseX, mouseY, delta); // 1.20.2+: Screen.render arka plan + düğmeleri çizer; içerik üstüne
-        context.drawCenteredString(font, title, width / 2, 8, 0xFFFFFF);
+    public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
+        // 26.1+: render -> extractRenderState; çizim sırası katmanı belirler (z yok), renkler ARGB.
+        super.extractRenderState(context, mouseX, mouseY, delta);
+        context.centeredText(font, title, width / 2, 8, 0xFFFFFFFF);
         if (!shown.isEmpty()) {
-            context.drawCenteredString(font, Component.translatable("betterhotbarswap.toolbar.edit_hint"),
-                width / 2, 19, 0xA0A0A0);
+            context.centeredText(font, Component.translatable("betterhotbarswap.toolbar.edit_hint"),
+                width / 2, 19, 0xFFA0A0A0);
         }
         if (shown.isEmpty()) {
-            context.drawCenteredString(font, Component.translatable("betterhotbarswap.toolbar.none"),
-                width / 2, height / 2 - 10, 0xA0A0A0);
+            context.centeredText(font, Component.translatable("betterhotbarswap.toolbar.none"),
+                width / 2, height / 2 - 10, 0xFFA0A0A0);
         }
         boolean hoveredBar = false;
         Inventory inv = minecraft.player != null ? minecraft.player.getInventory() : null;
         for (int r = 0; r < shown.size(); r++) {
             int idx = shown.get(r);
             int y = top + r * ROW_H;
-            context.drawString(font, String.valueOf(idx + 1), left + 2, y + 7, 0xFFFFFF);
+            context.text(font, String.valueOf(idx + 1), left + 2, y + 7, 0xFFFFFFFF);
             int hx = left + 14;
             // Oyunun KENDİ hotbar görseli (oyundakiyle birebir, kaynak paketine uyar).
             // Adı/API'si sürümle değişir: 1.20.1 widgets.png, 1.20.2+ "hud/hotbar" sprite'ı
             // (javap: InGameHud aynısını çiziyor). Port prosedüründe her sürüm kontrol edilir.
-            context.blitSprite(HOTBAR, hx, y, HOTBAR_W, 22);
+            context.blitSprite(RenderPipelines.GUI_TEXTURED, HOTBAR, hx, y, HOTBAR_W, 22);
             boolean over = mouseX >= hx && mouseX < hx + HOTBAR_W && mouseY >= y && mouseY < y + 22;
             java.util.List<ItemStack> entry = SurvivalToolbars.storage(minecraft).get(idx);
             for (int s = 0; s < 9; s++) {
@@ -97,22 +101,22 @@ public final class BHSToolbarScreen extends Screen {
                 if (st.isEmpty()) continue;
                 int ix = hx + 3 + s * 20;
                 int iy = y + 3;
-                context.renderItem(st, ix, iy);
-                context.renderItemDecorations(font, st, ix, iy);
+                context.item(st, ix, iy);
+                context.itemDecorations(font, st, ix, iy);
                 if (inv != null && !has(inv, st)) {
-                    context.fill(ix, iy, ix + 16, iy + 16, 300, 0x66FF0000);
+                    context.fill(ix, iy, ix + 16, iy + 16, 0x66FF0000);
                 }
             }
             // Tıklanabilir hissi: üstüne gelince tüm çubuk beyazlaşır.
             if (over) {
-                context.fill(hx, y, hx + HOTBAR_W, y + 22, 310, 0x60FFFFFF);
+                context.fill(hx, y, hx + HOTBAR_W, y + 22, 0x60FFFFFF);
                 hoveredBar = true;
             }
         }
         Component hint = Component.translatable("betterhotbarswap.toolbar.hint",
             com.betterhotbarswap.client.BetterHotbarSwapClient.getToolbarSaveKey().getTranslatedKeyMessage(),
             com.betterhotbarswap.client.BetterHotbarSwapClient.getToolbarLoadKey().getTranslatedKeyMessage());
-        context.drawCenteredString(font, hint, width / 2, height - 42, 0xA0A0A0);
+        context.centeredText(font, hint, width / 2, height - 42, 0xFFA0A0A0);
         long since = System.currentTimeMillis() - savedAtMs;
         int savedRow = shown.indexOf(savedIndex);
         if (since < SAVED_SHOW_MS && savedRow >= 0) {
@@ -120,10 +124,10 @@ public final class BHSToolbarScreen extends Screen {
             int alpha = (int) (255 * Math.min(1.0, (SAVED_SHOW_MS - since) / 500.0));
             Component saved = Component.translatable("betterhotbarswap.toolbar.saved");
             int x = Math.max(2, left - 4 - font.width(saved));
-            if (alpha > 4) context.drawString(font, saved, x, top + savedRow * ROW_H + 7, (alpha << 24) | 0x55FF55);
+            if (alpha > 4) context.text(font, saved, x, top + savedRow * ROW_H + 7, (alpha << 24) | 0x55FF55);
         }
         // Vanilla'nın "Düzenle" çevirisi: her dilde hazır.
-        if (hoveredBar) context.renderTooltip(font, Component.translatable("selectWorld.edit"), mouseX, mouseY);
+        if (hoveredBar) context.setTooltipForNextFrame(font, Component.translatable("selectWorld.edit"), mouseX, mouseY);
     }
 
     private static boolean has(Inventory inv, ItemStack want) {
@@ -133,8 +137,11 @@ public final class BHSToolbarScreen extends Screen {
 
     // Çubuğun üzerine tıklayınca düzenleyici açılır.
     @Override
-    public boolean mouseClicked(double mx, double my, int button) {
-        if (super.mouseClicked(mx, my, button)) return true;
+    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        if (super.mouseClicked(event, doubleClick)) return true;
+        double mx = event.x();
+        double my = event.y();
+        int button = event.button();
         for (int r = 0; r < shown.size(); r++) {
             int y = top + r * ROW_H;
             if (button == 0 && mx >= left + 14 && mx < left + 14 + HOTBAR_W && my >= y && my < y + 22) {
@@ -147,13 +154,13 @@ public final class BHSToolbarScreen extends Screen {
 
     // Açan tuşa tekrar basınca kapanır (vanilla envanter tuşu gibi).
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+    public boolean keyPressed(KeyEvent event) {
         var key = com.betterhotbarswap.client.BetterHotbarSwapClient.getToolbarsKey();
-        if (key != null && key.matches(keyCode, scanCode)) {
+        if (key != null && key.matches(event)) {
             onClose();
             return true;
         }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        return super.keyPressed(event);
     }
 
     @Override

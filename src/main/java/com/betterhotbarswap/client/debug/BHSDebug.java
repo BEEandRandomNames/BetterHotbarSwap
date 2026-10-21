@@ -5,7 +5,7 @@ import com.betterhotbarswap.config.BHSConfig;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.Slot;
@@ -77,15 +77,15 @@ public final class BHSDebug {
         return "id=" + slot.index + " [" + inv + "] " + stack + " take=" + take;
     }
 
-    public static void render(GuiGraphics context) {
+    public static void render(GuiGraphicsExtractor context) {
         var client = Minecraft.getInstance();
         if (client == null || client.player == null) return;
         if (!BHSConfig.debugEnabled) return;
         int y = 5;
-        context.drawString(client.font, Component.literal("[BHS] " + lastInfo + " | Hotbar:" + lastHotbar), 5, y, 0x00FF00);
+        context.text(client.font, Component.literal("[BHS] " + lastInfo + " | Hotbar:" + lastHotbar), 5, y, 0xFF00FF00);
         y += 12;
         for (String line : LINES) {
-            context.drawString(client.font, Component.literal(line), 5, y, 0xFFFF00);
+            context.text(client.font, Component.literal(line), 5, y, 0xFFFFFF00);
             y += 10;
         }
     }

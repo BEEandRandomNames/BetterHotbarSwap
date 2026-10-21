@@ -10,7 +10,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.item.ItemStack;
 
 // Kayıtlı araç çubukları (creative'in "Kaydedilmiş Araç Çubukları" fikri, her modda).
@@ -153,13 +153,13 @@ public final class SurvivalToolbars {
         int idB = VanillaClickExecutor.realSlotId(h, inv, b);
         if (idA == -1 || idB == -1) return false;
         if (a < 9 || a == 40) {
-            client.gameMode.handleInventoryMouseClick(h.containerId, idB, a, ClickType.SWAP, client.player);
+            client.gameMode.handleContainerInput(h.containerId, idB, a, ContainerInput.SWAP, client.player);
         } else if (b < 9 || b == 40) {
-            client.gameMode.handleInventoryMouseClick(h.containerId, idA, b, ClickType.SWAP, client.player);
+            client.gameMode.handleContainerInput(h.containerId, idA, b, ContainerInput.SWAP, client.player);
         } else {
-            client.gameMode.handleInventoryMouseClick(h.containerId, idB, 0, ClickType.PICKUP, client.player);
-            client.gameMode.handleInventoryMouseClick(h.containerId, idA, 0, ClickType.PICKUP, client.player);
-            client.gameMode.handleInventoryMouseClick(h.containerId, idB, 0, ClickType.PICKUP, client.player);
+            client.gameMode.handleContainerInput(h.containerId, idB, 0, ContainerInput.PICKUP, client.player);
+            client.gameMode.handleContainerInput(h.containerId, idA, 0, ContainerInput.PICKUP, client.player);
+            client.gameMode.handleContainerInput(h.containerId, idB, 0, ContainerInput.PICKUP, client.player);
         }
         return true;
     }

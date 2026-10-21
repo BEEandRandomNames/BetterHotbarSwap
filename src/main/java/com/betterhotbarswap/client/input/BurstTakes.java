@@ -5,18 +5,16 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.inventory.CraftingMenu;
 import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraft.world.inventory.Slot;
-import net.minecraft.world.inventory.TransientCraftingContainer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.CraftingRecipe;
-import net.minecraft.world.item.crafting.RecipeType;
+import net.minecraft.world.item.crafting.CraftingInput;
 
 // Aynı-tick burst motoru (hız tavanı: 0.06-0.1sn algısı).
 //
@@ -39,13 +37,15 @@ public final class BurstTakes {
     private BurstTakes() {
     }
 
-    public record BurstClick(int slotId, int button, ClickType action) {
+    public record BurstClick(int slotId, int button, ContainerInput action) {
     }
 
     public static final class BurstPlan {
         public final List<BurstClick> clicks = new ArrayList<>();
         public final Map<Integer, ItemStack> predicted = new HashMap<>();
         public int crafts;
+        public int outputSlotId = -1;
+        public ItemStack output = ItemStack.EMPTY;
     }
 
     private static final int MAX_CRAFTS = 96;
@@ -100,17 +100,18 @@ public final class BurstTakes {
                     grid[i] = s.isEmpty() ? 0 : s.getCount();
                     if (grid[i] > 0) used[i] = true;
                 }
-                // Tarif eşleşmesi + artık-ürün kontrolü (kova/su şişesi vb. -> fallback).
-                TransientCraftingContainer craftCopy = new TransientCraftingContainer(handler, gridW, gridW == 3 ? 3 : 2);
+                // 26.1 (1.21.2+): istemcide tarif listesi yok. Gerekmiyor: çıktı dolu = tarif şu an
+                // eşleşiyor; her üretim dolu her slottan 1 tüketir, slotlar boşalmadıkça aynı tarif
+                // (N = min). Artık ürün: vanilla istemcisinin KENDİ tahmini (ResultSlot da bunu
+                // kullanır, javap). Kitap/sancak kopyalama girdiyi ızgarada bırakır ve bu tahmin
+                // onu bilmez -> çıktı girdilerden biriyle aynı eşyaysa güvenli yol (drain).
+                List<ItemStack> gridItems = new ArrayList<>();
                 for (int i = 0; i < grid.length; i++) {
-                    craftCopy.setItem(i, handler.getSlot(gridFrom + i).getItem().copy());
+                    ItemStack s = handler.getSlot(gridFrom + i).getItem();
+                    if (s.getItem() == anchor.getItem()) return null;
+                    gridItems.add(s.copy());
                 }
-                // 1.21+: tarif girdisi envanter değil, ondan üretilen CraftingRecipeInput.
-                net.minecraft.world.item.crafting.CraftingInput input = craftCopy.asCraftInput();
-                Optional<net.minecraft.world.item.crafting.RecipeHolder<CraftingRecipe>> match = client.level.getRecipeManager()
-                    .getRecipeFor(RecipeType.CRAFTING, input, client.level);
-                if (match.isEmpty()) return null;
-                for (ItemStack rem : match.get().value().getRemainingItems(input)) {
+                for (ItemStack rem : CraftingRecipe.defaultCraftingReminder(CraftingInput.of(gridW, grid.length / gridW, gridItems))) {
                     if (!rem.isEmpty()) return null;
                 }
             } else {
@@ -159,6 +160,8 @@ public final class BurstTakes {
             simOut.setCount(r);
             int max = Math.max(1, anchor.getMaxStackSize());
             BurstPlan plan = new BurstPlan();
+            plan.outputSlotId = outputRealId;
+            plan.output = simOut.copy();
             int takes = 0;
 
             for (int c = 0; c < crafts && takes < 160; c++) {
@@ -170,7 +173,7 @@ public final class BurstTakes {
                 // Executor ile AYNI karar sırası (survival dalı).
                 if (oldHb.isEmpty() && outputRealId != hbRealId) {
                     // BOŞ hedefe SWAP = alım (tüketim + refill). Tek paket!
-                    plan.clicks.add(new BurstClick(outputRealId, hotbarIndex, ClickType.SWAP));
+                    plan.clicks.add(new BurstClick(outputRealId, hotbarIndex, ContainerInput.SWAP));
                     ItemStack fc2 = anchor.copy();
                     fc2.setCount(fc);
                     sim.put(hotbarIndex, fc2);
@@ -180,8 +183,8 @@ public final class BurstTakes {
                     takes++;
                 } else if (sameHb && fc <= max - oldHb.getCount() && outputRealId != hbRealId) {
                     // MERGE (bütün sığar).
-                    plan.clicks.add(new BurstClick(outputRealId, 0, ClickType.PICKUP));
-                    plan.clicks.add(new BurstClick(hbRealId, 0, ClickType.PICKUP));
+                    plan.clicks.add(new BurstClick(outputRealId, 0, ContainerInput.PICKUP));
+                    plan.clicks.add(new BurstClick(hbRealId, 0, ContainerInput.PICKUP));
                     ItemStack m = oldHb.copy();
                     m.setCount(oldHb.getCount() + fc);
                     sim.put(hotbarIndex, m);
@@ -194,9 +197,9 @@ public final class BurstTakes {
                     int rem = fc - (max - oldHb.getCount());
                     int dest = findDest(sim, anchor, rem, hotbarIndex);
                     if (dest == -1 || realIds.get(dest) == -1) break;
-                    plan.clicks.add(new BurstClick(outputRealId, 0, ClickType.PICKUP));
-                    plan.clicks.add(new BurstClick(hbRealId, 0, ClickType.PICKUP));
-                    plan.clicks.add(new BurstClick(realIds.get(dest), 0, ClickType.PICKUP));
+                    plan.clicks.add(new BurstClick(outputRealId, 0, ContainerInput.PICKUP));
+                    plan.clicks.add(new BurstClick(hbRealId, 0, ContainerInput.PICKUP));
+                    plan.clicks.add(new BurstClick(realIds.get(dest), 0, ContainerInput.PICKUP));
                     ItemStack f = oldHb.copy();
                     f.setCount(max);
                     sim.put(hotbarIndex, f);
@@ -212,8 +215,8 @@ public final class BurstTakes {
                     // OVERFLOW (hedef dolu, alım taşma hedefine). Bulk ON-kuralları.
                     int dest = findDest(sim, anchor, fc, hotbarIndex);
                     if (dest == -1 || realIds.get(dest) == -1) break;
-                    plan.clicks.add(new BurstClick(outputRealId, 0, ClickType.PICKUP));
-                    plan.clicks.add(new BurstClick(realIds.get(dest), 0, ClickType.PICKUP));
+                    plan.clicks.add(new BurstClick(outputRealId, 0, ContainerInput.PICKUP));
+                    plan.clicks.add(new BurstClick(realIds.get(dest), 0, ContainerInput.PICKUP));
                     ItemStack de = sim.get(dest);
                     ItemStack dn = de.isEmpty() ? anchor.copy() : de.copy();
                     dn.setCount(de.isEmpty() ? fc : de.getCount() + fc);
@@ -229,9 +232,9 @@ public final class BurstTakes {
                     if (empty == -1 || realIds.get(empty) == -1) break;
                     Integer emptyReal = realIds.get(empty);
                     if (empty < 9) {
-                        plan.clicks.add(new BurstClick(hbRealId, empty, ClickType.SWAP));
+                        plan.clicks.add(new BurstClick(hbRealId, empty, ContainerInput.SWAP));
                     } else {
-                        plan.clicks.add(new BurstClick(emptyReal, hotbarIndex, ClickType.SWAP));
+                        plan.clicks.add(new BurstClick(emptyReal, hotbarIndex, ContainerInput.SWAP));
                     }
                     sim.put(empty, oldHb.copy());
                     sim.put(hotbarIndex, ItemStack.EMPTY);
@@ -254,7 +257,13 @@ public final class BurstTakes {
     public static void fire(Minecraft client, AbstractContainerMenu handler, BurstPlan plan, int hotbarIndex) {
         if (client == null || client.gameMode == null || plan == null) return;
         for (BurstClick c : plan.clicks) {
-            client.gameMode.handleInventoryMouseClick(handler.containerId, c.slotId(), c.button(), c.action(), client.player);
+            // İstemci çıktıyı KENDİSİ yeniden doldurmaz (tarif sunucuda). Sunucunun
+            // dolduracağı ürünü önce yerelde koy: tıklama tahmini sunucuyla aynı olur.
+            // Yoksa boş çıktıya PICKUP yerelde boşa gider, ardındaki PICKUP(hedef)
+            // hedef yığını hayalet imlece alır -> sonraki tick "imleç kurtarma" gerçek
+            // dolu slotu imlece çeker ve toplama durur (kullanıcı, 26.1, 2026-10-22).
+            if (c.slotId() == plan.outputSlotId) handler.getSlot(c.slotId()).set(plan.output.copy());
+            client.gameMode.handleContainerInput(handler.containerId, c.slotId(), c.button(), c.action(), client.player);
         }
         Inventory inv = client.player.getInventory();
         for (Map.Entry<Integer, ItemStack> e : plan.predicted.entrySet()) {

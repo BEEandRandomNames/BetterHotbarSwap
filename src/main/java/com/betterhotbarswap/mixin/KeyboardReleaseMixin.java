@@ -3,6 +3,7 @@ package com.betterhotbarswap.mixin;
 import com.betterhotbarswap.client.input.HotbarInputController;
 import net.minecraft.client.KeyboardHandler;
 import org.lwjgl.glfw.GLFW;
+import net.minecraft.client.input.KeyEvent;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -15,7 +16,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(KeyboardHandler.class)
 public final class KeyboardReleaseMixin {
     @Inject(method = "keyPress", at = @At("HEAD"))
-    private void betterhotbarswap$onKey(long window, int key, int scancode, int action, int modifiers, CallbackInfo ci) {
+    private void betterhotbarswap$onKey(long window, int action, KeyEvent event, CallbackInfo ci) {
+        int key = event.key();
+        int scancode = event.scancode();
         if (action == GLFW.GLFW_RELEASE) {
             HotbarInputController.releasePressed(key);
         } else if (action == GLFW.GLFW_PRESS) {

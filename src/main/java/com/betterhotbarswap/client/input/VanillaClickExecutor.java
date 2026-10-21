@@ -7,7 +7,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
@@ -44,12 +44,12 @@ public class VanillaClickExecutor {
     // handler'ında yerel yapar, sonucu creative paketiyle bildirir (sendContentUpdates ->
     // CreativeInventoryListener). ClickSlot'un sunucu ara-senkronu (çok adımlı öncelik
     // zinciri) dinleyicinin bayat izleme kopyasıyla karışıp kopya üretiyordu (#45).
-    private static void click(Minecraft client, AbstractContainerMenu handler, int id, int button, ClickType type) {
+    private static void click(Minecraft client, AbstractContainerMenu handler, int id, int button, ContainerInput type) {
         if (handler instanceof CreativeModeInventoryScreen.ItemPickerMenu && !idsTrustworthy(handler)) {
             client.player.inventoryMenu.clicked(id, button, type, client.player);
             client.player.inventoryMenu.broadcastChanges();
         } else {
-            client.gameMode.handleInventoryMouseClick(handler.containerId, id, button, type, client.player);
+            client.gameMode.handleContainerInput(handler.containerId, id, button, type, client.player);
         }
     }
     // Evrensel stacklenebilirlik: aynı item + aynı NBT (max sayı item'dan okunur).
@@ -78,8 +78,8 @@ public class VanillaClickExecutor {
     }
     private static String snapshot(Inventory inv) {
         StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < inv.items.size(); i++) {
-            ItemStack s = inv.items.get(i);
+        for (int i = 0; i < inv.getNonEquipmentItems().size(); i++) {
+            ItemStack s = inv.getNonEquipmentItems().get(i);
             if (!s.isEmpty()) {
                 try {
                     sb.append(i).append('=').append(s.getHoverName().getString()).append('x').append(s.getCount()).append(';');
@@ -88,9 +88,9 @@ public class VanillaClickExecutor {
                 }
             }
         }
-        if (!inv.offhand.get(0).isEmpty()) {
+        if (!inv.getItem(Inventory.SLOT_OFFHAND).isEmpty()) {
             try {
-                sb.append("off=").append(inv.offhand.get(0).getHoverName().getString()).append(';');
+                sb.append("off=").append(inv.getItem(Inventory.SLOT_OFFHAND).getHoverName().getString()).append(';');
             } catch (Exception e) {
                 sb.append("off=?;");
             }
@@ -160,21 +160,21 @@ public class VanillaClickExecutor {
         if (left > 0 && (plan < 0 || idOf.applyAsInt(plan) < 0)) return false;
         if (merges.isEmpty()) {
             // Birleşme yok: tek SWAP (imleçsiz).
-            click(client, handler, targetId, plan, ClickType.SWAP);
+            click(client, handler, targetId, plan, ContainerInput.SWAP);
             inv.setItem(plan, old);
         } else {
-            click(client, handler, targetId, 0, ClickType.PICKUP);
+            click(client, handler, targetId, 0, ContainerInput.PICKUP);
             int carry = old.getCount();
             for (int j : merges) {
                 ItemStack s = inv.getItem(j).copy();
                 int mv = Math.min(s.getMaxStackSize() - s.getCount(), carry);
-                click(client, handler, idOf.applyAsInt(j), 0, ClickType.PICKUP);
+                click(client, handler, idOf.applyAsInt(j), 0, ContainerInput.PICKUP);
                 s.setCount(s.getCount() + mv);
                 inv.setItem(j, s);
                 carry -= mv;
             }
             if (carry > 0) {
-                click(client, handler, idOf.applyAsInt(plan), 0, ClickType.PICKUP);
+                click(client, handler, idOf.applyAsInt(plan), 0, ContainerInput.PICKUP);
                 ItemStack rest = old.copy();
                 rest.setCount(carry);
                 inv.setItem(plan, rest);
@@ -332,8 +332,8 @@ public class VanillaClickExecutor {
         }
         if (dest == -1) return false;
         ItemStack destOld = playerInv.getItem(dest).copy();
-        client.gameMode.handleInventoryMouseClick(handler.containerId, focusedSlotId, 0, ClickType.PICKUP, client.player);
-        client.gameMode.handleInventoryMouseClick(handler.containerId, getRealSlotId(handler, playerInv, dest), 0, ClickType.PICKUP, client.player);
+        client.gameMode.handleContainerInput(handler.containerId, focusedSlotId, 0, ContainerInput.PICKUP, client.player);
+        client.gameMode.handleContainerInput(handler.containerId, getRealSlotId(handler, playerInv, dest), 0, ContainerInput.PICKUP, client.player);
         ItemStack grown = destOld.isEmpty() ? focusedStack.copy() : destOld.copy();
         grown.setCount(destOld.isEmpty() ? focusedStack.getCount() : destOld.getCount() + focusedStack.getCount());
         playerInv.setItem(dest, grown);
@@ -381,8 +381,8 @@ public class VanillaClickExecutor {
                     merged.setCount(oldOff.getCount() + focusedStack.getCount());
                     BHSDebug.log("OFFHAND MERGE sync=" + handler.containerId + " slot " + focusedSlotId
                         + " -> off x" + merged.getCount());
-                    client.gameMode.handleInventoryMouseClick(handler.containerId, focusedSlotId, 0, ClickType.PICKUP, client.player);
-                    client.gameMode.handleInventoryMouseClick(handler.containerId, offRealId, 0, ClickType.PICKUP, client.player);
+                    client.gameMode.handleContainerInput(handler.containerId, focusedSlotId, 0, ContainerInput.PICKUP, client.player);
+                    client.gameMode.handleContainerInput(handler.containerId, offRealId, 0, ContainerInput.PICKUP, client.player);
                     playerInv.setItem(40, merged);
                     if (target.container == playerInv) playerInv.setItem(target.getContainerSlot(), ItemStack.EMPTY);
                     if (com.betterhotbarswap.config.BHSConfig.debugEnabled) BetterHotbarSwap.LOGGER.info("[BHS-INV] AFTER {}", snapshot(playerInv));
@@ -399,9 +399,9 @@ public class VanillaClickExecutor {
                     destNew.setCount(destExisting.isEmpty() ? remainder : destExisting.getCount() + remainder);
                     BHSDebug.log("OFFHAND MERGE_FILL sync=" + handler.containerId + " slot " + focusedSlotId
                         + " -> off x" + filledOff.getCount() + " + kalan x" + remainder + " -> " + slotName(dest));
-                    client.gameMode.handleInventoryMouseClick(handler.containerId, focusedSlotId, 0, ClickType.PICKUP, client.player);
-                    client.gameMode.handleInventoryMouseClick(handler.containerId, offRealId, 0, ClickType.PICKUP, client.player);
-                    client.gameMode.handleInventoryMouseClick(handler.containerId, destReal, 0, ClickType.PICKUP, client.player);
+                    client.gameMode.handleContainerInput(handler.containerId, focusedSlotId, 0, ContainerInput.PICKUP, client.player);
+                    client.gameMode.handleContainerInput(handler.containerId, offRealId, 0, ContainerInput.PICKUP, client.player);
+                    client.gameMode.handleContainerInput(handler.containerId, destReal, 0, ContainerInput.PICKUP, client.player);
                     playerInv.setItem(40, filledOff);
                     playerInv.setItem(dest, destNew);
                     if (target.container == playerInv && target.getContainerSlot() != dest) {
@@ -421,8 +421,8 @@ public class VanillaClickExecutor {
                     destNew.setCount(destExisting.isEmpty() ? focusedStack.getCount() : destExisting.getCount() + focusedStack.getCount());
                     BHSDebug.log("OFFHAND OVERFLOW sync=" + handler.containerId + " slot " + focusedSlotId
                         + " +" + focusedStack.getCount() + " -> " + slotName(dest) + " (off korundu)");
-                    client.gameMode.handleInventoryMouseClick(handler.containerId, focusedSlotId, 0, ClickType.PICKUP, client.player);
-                    client.gameMode.handleInventoryMouseClick(handler.containerId, destReal, 0, ClickType.PICKUP, client.player);
+                    client.gameMode.handleContainerInput(handler.containerId, focusedSlotId, 0, ContainerInput.PICKUP, client.player);
+                    client.gameMode.handleContainerInput(handler.containerId, destReal, 0, ContainerInput.PICKUP, client.player);
                     playerInv.setItem(dest, destNew);
                     if (target.container == playerInv && target.getContainerSlot() != dest) {
                         playerInv.setItem(target.getContainerSlot(), ItemStack.EMPTY);
@@ -440,8 +440,8 @@ public class VanillaClickExecutor {
                 if (emptyReal != -1) {
                     BHSDebug.log("OFFHAND PRIORITY sync=" + handler.containerId + " eski off -> hb" + (emptyHb + 1)
                         + ", sonra slot " + focusedSlotId + " -> off");
-                    client.gameMode.handleInventoryMouseClick(handler.containerId, offRealId, emptyHb, ClickType.SWAP, client.player);
-                    client.gameMode.handleInventoryMouseClick(handler.containerId, focusedSlotId, 40, ClickType.SWAP, client.player);
+                    client.gameMode.handleContainerInput(handler.containerId, offRealId, emptyHb, ContainerInput.SWAP, client.player);
+                    client.gameMode.handleContainerInput(handler.containerId, focusedSlotId, 40, ContainerInput.SWAP, client.player);
                     if (com.betterhotbarswap.config.BHSConfig.debugEnabled) BetterHotbarSwap.LOGGER.info("[BHS-INV] AFTER {}", snapshot(playerInv));
                     return true;
                 }
@@ -451,8 +451,8 @@ public class VanillaClickExecutor {
             if (mainReal != -1) {
                 BHSDebug.log("OFFHAND PRIORITY sync=" + handler.containerId + " eski off -> m" + mainEmpty
                     + ", sonra slot " + focusedSlotId + " -> off");
-                client.gameMode.handleInventoryMouseClick(handler.containerId, mainReal, 40, ClickType.SWAP, client.player);
-                client.gameMode.handleInventoryMouseClick(handler.containerId, focusedSlotId, 40, ClickType.SWAP, client.player);
+                client.gameMode.handleContainerInput(handler.containerId, mainReal, 40, ContainerInput.SWAP, client.player);
+                client.gameMode.handleContainerInput(handler.containerId, focusedSlotId, 40, ContainerInput.SWAP, client.player);
                 if (com.betterhotbarswap.config.BHSConfig.debugEnabled) BetterHotbarSwap.LOGGER.info("[BHS-INV] AFTER {}", snapshot(playerInv));
                 return true;
             }
@@ -464,7 +464,7 @@ public class VanillaClickExecutor {
             return false;
         }
         BHSDebug.log("OFFHAND SWAP sync=" + handler.containerId + " slot=" + focusedSlotId + " -> off");
-        client.gameMode.handleInventoryMouseClick(handler.containerId, focusedSlotId, 40, ClickType.SWAP, client.player);
+        client.gameMode.handleContainerInput(handler.containerId, focusedSlotId, 40, ContainerInput.SWAP, client.player);
         if (com.betterhotbarswap.config.BHSConfig.debugEnabled) BetterHotbarSwap.LOGGER.info("[BHS-INV] AFTER {}", snapshot(playerInv));
         return true;
     }
@@ -481,7 +481,7 @@ public class VanillaClickExecutor {
         if (com.betterhotbarswap.config.BHSConfig.debugEnabled) BetterHotbarSwap.LOGGER.info("[BHS-INV] BEFORE {}", snapshot(playerInv));
         if (oldOff.isEmpty() || fromPlayer) {
             BHSDebug.log("OFFHAND SWAP sync=" + handler.containerId + " slot=" + focusedSlotId + " -> off (slotsuz)");
-            client.gameMode.handleInventoryMouseClick(handler.containerId, focusedSlotId, 40, ClickType.SWAP, client.player);
+            client.gameMode.handleContainerInput(handler.containerId, focusedSlotId, 40, ContainerInput.SWAP, client.player);
             if (com.betterhotbarswap.config.BHSConfig.debugEnabled) BetterHotbarSwap.LOGGER.info("[BHS-INV] AFTER {}", snapshot(playerInv));
             return true;
         }
@@ -496,8 +496,8 @@ public class VanillaClickExecutor {
             if (hbReal == -1) return false;
             BHSDebug.log("OFFHAND CHAIN sync=" + handler.containerId + " slot " + focusedSlotId
                 + " -> hb" + (emptyHb + 1) + " -> off");
-            client.gameMode.handleInventoryMouseClick(handler.containerId, focusedSlotId, emptyHb, ClickType.SWAP, client.player);
-            client.gameMode.handleInventoryMouseClick(handler.containerId, hbReal, 40, ClickType.SWAP, client.player);
+            client.gameMode.handleContainerInput(handler.containerId, focusedSlotId, emptyHb, ContainerInput.SWAP, client.player);
+            client.gameMode.handleContainerInput(handler.containerId, hbReal, 40, ContainerInput.SWAP, client.player);
             if (com.betterhotbarswap.config.BHSConfig.debugEnabled) BetterHotbarSwap.LOGGER.info("[BHS-INV] AFTER {}", snapshot(playerInv));
             return true;
         }
@@ -511,9 +511,9 @@ public class VanillaClickExecutor {
         }
         BHSDebug.log("OFFHAND CHAIN sync=" + handler.containerId + " hb" + (x + 1) + " -> m" + mainEmpty
             + ", slot " + focusedSlotId + " -> hb" + (x + 1) + " -> off");
-        client.gameMode.handleInventoryMouseClick(handler.containerId, mainReal, x, ClickType.SWAP, client.player);
-        client.gameMode.handleInventoryMouseClick(handler.containerId, focusedSlotId, x, ClickType.SWAP, client.player);
-        client.gameMode.handleInventoryMouseClick(handler.containerId, xReal, 40, ClickType.SWAP, client.player);
+        client.gameMode.handleContainerInput(handler.containerId, mainReal, x, ContainerInput.SWAP, client.player);
+        client.gameMode.handleContainerInput(handler.containerId, focusedSlotId, x, ContainerInput.SWAP, client.player);
+        client.gameMode.handleContainerInput(handler.containerId, xReal, 40, ContainerInput.SWAP, client.player);
         if (com.betterhotbarswap.config.BHSConfig.debugEnabled) BetterHotbarSwap.LOGGER.info("[BHS-INV] AFTER {}", snapshot(playerInv));
         return true;
     }
@@ -618,8 +618,8 @@ public class VanillaClickExecutor {
                         merged.setCount(oldHotbarStack.getCount() + focusedStack.getCount());
                         BHSDebug.log((shiftBulk ? "SHIFT_BULK " : "") + "MERGE sync=" + handler.containerId + " pos " + focusedPos + " + hb" + (hotbarIndex + 1)
                             + " -> hb" + (hotbarIndex + 1) + " x" + merged.getCount());
-                        click(client, handler, focusedPos, 0, ClickType.PICKUP);
-                        click(client, handler, hotbarPos, 0, ClickType.PICKUP);
+                        click(client, handler, focusedPos, 0, ContainerInput.PICKUP);
+                        click(client, handler, hotbarPos, 0, ContainerInput.PICKUP);
                         playerInv.setItem(hotbarIndex, merged);
                         if (focusedTrue != -1) playerInv.setItem(focusedTrue, ItemStack.EMPTY);
                         if (com.betterhotbarswap.config.BHSConfig.debugEnabled) BetterHotbarSwap.LOGGER.info("[BHS-INV] AFTER {}", snapshot(playerInv));
@@ -636,9 +636,9 @@ public class VanillaClickExecutor {
                         BHSDebug.log((shiftBulk ? "SHIFT_BULK " : "") + "MERGE_FILL sync=" + handler.containerId + " pos " + focusedPos
                             + " -> hb" + (hotbarIndex + 1) + " x" + filledTarget.getCount()
                             + " + kalan x" + remainder + " -> " + (destInv < 9 ? "hb" + (destInv + 1) : "m" + destInv));
-                        click(client, handler, focusedPos, 0, ClickType.PICKUP);
-                        click(client, handler, hotbarPos, 0, ClickType.PICKUP);
-                        click(client, handler, destPos, 0, ClickType.PICKUP);
+                        click(client, handler, focusedPos, 0, ContainerInput.PICKUP);
+                        click(client, handler, hotbarPos, 0, ContainerInput.PICKUP);
+                        click(client, handler, destPos, 0, ContainerInput.PICKUP);
                         playerInv.setItem(hotbarIndex, filledTarget);
                         playerInv.setItem(destInv, destNew);
                         if (focusedTrue != -1 && focusedTrue != destInv) playerInv.setItem(focusedTrue, ItemStack.EMPTY);
@@ -667,8 +667,8 @@ public class VanillaClickExecutor {
                     BHSDebug.log("OVERFLOW sync=" + handler.containerId + " pos " + focusedPos
                         + " +" + focusedStack.getCount() + " -> " + (destInv < 9 ? "hb" + (destInv + 1) : "m" + destInv)
                         + " (hb" + (hotbarIndex + 1) + " x" + oldHotbarStack.getMaxStackSize() + " korundu)");
-                    click(client, handler, focusedPos, 0, ClickType.PICKUP);
-                    click(client, handler, destPos, 0, ClickType.PICKUP);
+                    click(client, handler, focusedPos, 0, ContainerInput.PICKUP);
+                    click(client, handler, destPos, 0, ContainerInput.PICKUP);
                     playerInv.setItem(destInv, destNew);
                     if (focusedTrue != -1 && focusedTrue != destInv) playerInv.setItem(focusedTrue, ItemStack.EMPTY);
                     if (com.betterhotbarswap.config.BHSConfig.debugEnabled) BetterHotbarSwap.LOGGER.info("[BHS-INV] AFTER {}", snapshot(playerInv));
@@ -680,7 +680,7 @@ public class VanillaClickExecutor {
                 if (evictWithinHotbar(client, handler, playerInv, hotbarIndex, i -> 36 + i)) {
                     BHSDebug.log("PRIORITY sync=" + handler.containerId + " eski hb" + (hotbarIndex + 1)
                         + " hotbar'da kaldi, sonra pos " + focusedPos + " -> hb" + (hotbarIndex + 1));
-                    click(client, handler, focusedPos, hotbarIndex, ClickType.SWAP);
+                    click(client, handler, focusedPos, hotbarIndex, ContainerInput.SWAP);
                     // Tahmin: sonraki basış senkronu beklemeden tutarlı okusun (bug #15).
                     playerInv.setItem(hotbarIndex, focusedStack);
                     if (focusedTrue != -1) playerInv.setItem(focusedTrue, ItemStack.EMPTY);
@@ -689,7 +689,7 @@ public class VanillaClickExecutor {
                 }
             }
             BHSDebug.log("SEND SWAP sync=" + handler.containerId + " pos=" + focusedPos + " -> hotbar" + (hotbarIndex + 1));
-            click(client, handler, focusedPos, hotbarIndex, ClickType.SWAP);
+            click(client, handler, focusedPos, hotbarIndex, ContainerInput.SWAP);
             playerInv.setItem(hotbarIndex, focusedStack);
             if (focusedTrue != -1) playerInv.setItem(focusedTrue, oldHotbarStack);
             if (com.betterhotbarswap.config.BHSConfig.debugEnabled) BetterHotbarSwap.LOGGER.info("[BHS-INV] AFTER {}", snapshot(playerInv));
@@ -717,8 +717,8 @@ public class VanillaClickExecutor {
                         BHSDebug.log((shiftBulk ? "SHIFT_BULK " : "") + "MERGE sync=" + handler.containerId + " slot " + focusedSlotId + " + hb" + (hotbarIndex + 1)
                             + " -> hb" + (hotbarIndex + 1) + " x" + merged.getCount());
                         if (com.betterhotbarswap.config.BHSConfig.debugEnabled) BetterHotbarSwap.LOGGER.info("[BHS-INV] BEFORE {}", snapshot(playerInv));
-                        client.gameMode.handleInventoryMouseClick(handler.containerId, focusedSlotId, 0, ClickType.PICKUP, client.player);
-                        client.gameMode.handleInventoryMouseClick(handler.containerId, hotbarRealSlotId, 0, ClickType.PICKUP, client.player);
+                        client.gameMode.handleContainerInput(handler.containerId, focusedSlotId, 0, ContainerInput.PICKUP, client.player);
+                        client.gameMode.handleContainerInput(handler.containerId, hotbarRealSlotId, 0, ContainerInput.PICKUP, client.player);
                         playerInv.setItem(hotbarIndex, merged);
                         if (target.container == playerInv) {
                             playerInv.setItem(target.getContainerSlot(), ItemStack.EMPTY);
@@ -742,9 +742,9 @@ public class VanillaClickExecutor {
                                 + " -> hb" + (hotbarIndex + 1) + " x" + filledTarget.getCount()
                                 + " + kalan x" + remainder + " -> " + (destInv < 9 ? "hb" + (destInv + 1) : "m" + destInv));
                             if (com.betterhotbarswap.config.BHSConfig.debugEnabled) BetterHotbarSwap.LOGGER.info("[BHS-INV] BEFORE {}", snapshot(playerInv));
-                            client.gameMode.handleInventoryMouseClick(handler.containerId, focusedSlotId, 0, ClickType.PICKUP, client.player);
-                            client.gameMode.handleInventoryMouseClick(handler.containerId, hotbarRealSlotId, 0, ClickType.PICKUP, client.player);
-                            client.gameMode.handleInventoryMouseClick(handler.containerId, destRealId, 0, ClickType.PICKUP, client.player);
+                            client.gameMode.handleContainerInput(handler.containerId, focusedSlotId, 0, ContainerInput.PICKUP, client.player);
+                            client.gameMode.handleContainerInput(handler.containerId, hotbarRealSlotId, 0, ContainerInput.PICKUP, client.player);
+                            client.gameMode.handleContainerInput(handler.containerId, destRealId, 0, ContainerInput.PICKUP, client.player);
                             playerInv.setItem(hotbarIndex, filledTarget);
                             playerInv.setItem(destInv, destNew);
                             if (target.container == playerInv && target.getContainerSlot() != destInv) {
@@ -789,8 +789,8 @@ public class VanillaClickExecutor {
                             + " +" + focusedStack.getCount() + " -> " + (destInv < 9 ? "hb" + (destInv + 1) : "m" + destInv)
                             + " (hb" + (hotbarIndex + 1) + " x" + oldHotbarStack.getMaxStackSize() + " korundu)");
                         if (com.betterhotbarswap.config.BHSConfig.debugEnabled) BetterHotbarSwap.LOGGER.info("[BHS-INV] BEFORE {}", snapshot(playerInv));
-                        client.gameMode.handleInventoryMouseClick(handler.containerId, focusedSlotId, 0, ClickType.PICKUP, client.player);
-                        client.gameMode.handleInventoryMouseClick(handler.containerId, destRealId, 0, ClickType.PICKUP, client.player);
+                        client.gameMode.handleContainerInput(handler.containerId, focusedSlotId, 0, ContainerInput.PICKUP, client.player);
+                        client.gameMode.handleContainerInput(handler.containerId, destRealId, 0, ContainerInput.PICKUP, client.player);
                         playerInv.setItem(destInv, destNew);
                         if (target.container == playerInv && target.getContainerSlot() != destInv) {
                             playerInv.setItem(target.getContainerSlot(), ItemStack.EMPTY);
@@ -805,7 +805,7 @@ public class VanillaClickExecutor {
                 if (evictWithinHotbar(client, handler, playerInv, hotbarIndex, i -> getRealSlotId(handler, playerInv, i))) {
                     BHSDebug.log("PRIORITY sync=" + handler.containerId + " eski hb" + (hotbarIndex + 1)
                         + " hotbar'da kaldi, sonra slot " + focusedSlotId + " -> hb" + (hotbarIndex + 1));
-                    client.gameMode.handleInventoryMouseClick(handler.containerId, focusedSlotId, hotbarIndex, ClickType.SWAP, client.player);
+                    client.gameMode.handleContainerInput(handler.containerId, focusedSlotId, hotbarIndex, ContainerInput.SWAP, client.player);
                     return true;
                 }
                 // Main-evict SADECE container/output: oyuncu-ici hamlede hotbar
@@ -817,14 +817,14 @@ public class VanillaClickExecutor {
                     if (mainRealId != -1) {
                         BHSDebug.log("PRIORITY sync=" + handler.containerId + " eski hb" + (hotbarIndex + 1)
                             + " -> m" + mainEmpty + ", sonra slot " + focusedSlotId + " -> hb" + (hotbarIndex + 1));
-                        client.gameMode.handleInventoryMouseClick(handler.containerId, mainRealId, hotbarIndex, ClickType.SWAP, client.player);
-                        client.gameMode.handleInventoryMouseClick(handler.containerId, focusedSlotId, hotbarIndex, ClickType.SWAP, client.player);
+                        client.gameMode.handleContainerInput(handler.containerId, mainRealId, hotbarIndex, ContainerInput.SWAP, client.player);
+                        client.gameMode.handleContainerInput(handler.containerId, focusedSlotId, hotbarIndex, ContainerInput.SWAP, client.player);
                         return true;
                     }
                 }
             }
             BHSDebug.log("SEND SWAP sync=" + handler.containerId + " slot=" + focusedSlotId + " -> hotbar" + (hotbarIndex + 1));
-            client.gameMode.handleInventoryMouseClick(handler.containerId, focusedSlotId, hotbarIndex, ClickType.SWAP, client.player);
+            client.gameMode.handleContainerInput(handler.containerId, focusedSlotId, hotbarIndex, ContainerInput.SWAP, client.player);
             return true;
         }
         // Creative liste sekmesi hotbar satırı (ulaşılması zor, yedek yol):

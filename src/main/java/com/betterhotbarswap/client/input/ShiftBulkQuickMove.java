@@ -5,7 +5,7 @@ import com.betterhotbarswap.client.debug.BHSDebug;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
@@ -31,6 +31,10 @@ public final class ShiftBulkQuickMove {
     private static String lastProgressKey = "";
     private static int stuckTicks;
     private static long lastStallMsgMs;
+    // İmleç ancak birkaç tick kalıcıysa gerçektir (sunucu düzeltmesi 1-2 tick'te gelir);
+    // hayalet imlece göre "kurtarma" PICKUP'ı sunucuda dolu slotu imlece çekebilir.
+    private static int carriedTicks;
+    private static final int CARRIED_CONFIRM = 3;
     // Kaynak-governor (anti-dupe yapısal sigorta): bulk alımları girdiyi
     // tüketmek ZORUNDADIR. Belli sürede girdi azalmadıysa kaynak tükenmeyen
     // (sonsuz) kaynaktır -> DUR. Eski tahmin kalıntıları da bu yüzden durur.
@@ -72,6 +76,7 @@ public final class ShiftBulkQuickMove {
         itemKey = keyOf(anchor);
         actions = 0;
         ticks = 0;
+        carriedTicks = 0;
         stableTicks = 0;
         settled = false;
         lastProgressKey = "";
@@ -97,7 +102,11 @@ public final class ShiftBulkQuickMove {
             return;
         }
         Inventory inv0 = client.player.getInventory();
-        if (!handler.getCarried().isEmpty()) {
+        if (handler.getCarried().isEmpty()) {
+            carriedTicks = 0;
+        } else if (++carriedTicks < CARRIED_CONFIRM) {
+            return;
+        } else {
             // İmleç kurtarma (SADECE bulk sırasında): en yakın boşa yerleştir
             // + DUR. Kullanıcının elindeki de olsa en güvenli yer boş slottur;
             // sessizce imleçte bırakmaktan iyidir. Boş yoksa dokunulmaz.
@@ -108,7 +117,7 @@ public final class ShiftBulkQuickMove {
             if (empty == -1 && hotbarIndex != 9) empty = firstEmptyMain(inv0);
             int emptyReal = empty == -1 ? -1 : VanillaClickExecutor.realSlotId(handler, inv0, empty);
             if (emptyReal != -1) {
-                client.gameMode.handleInventoryMouseClick(handler.containerId, emptyReal, 0, ClickType.PICKUP, client.player);
+                client.gameMode.handleContainerInput(handler.containerId, emptyReal, 0, ContainerInput.PICKUP, client.player);
                 inv0.setItem(empty, cur);
                 BHSDebug.log("SHIFT_BULK-QM imlec-kurtarma x" + cur.getCount() + " -> " + slotName(empty));
                 finish("imlec-kurtarma");
@@ -220,7 +229,7 @@ public final class ShiftBulkQuickMove {
             boolean done = false;
             int emptyHb = nearestEmptyHotbar(inv, hotbarIndex);
             if (emptyHb != -1) {
-                client.gameMode.handleInventoryMouseClick(handler.containerId, targetRealId, emptyHb, ClickType.SWAP, client.player);
+                client.gameMode.handleContainerInput(handler.containerId, targetRealId, emptyHb, ContainerInput.SWAP, client.player);
                 inv.setItem(emptyHb, targetStack);
                 inv.setItem(hotbarIndex, ItemStack.EMPTY);
                 actions++;
@@ -234,7 +243,7 @@ public final class ShiftBulkQuickMove {
                     finish("yer-yok");
                     return;
                 }
-                client.gameMode.handleInventoryMouseClick(handler.containerId, mainRealId, hotbarIndex, ClickType.SWAP, client.player);
+                client.gameMode.handleContainerInput(handler.containerId, mainRealId, hotbarIndex, ContainerInput.SWAP, client.player);
                 inv.setItem(mainEmpty, targetStack);
                 inv.setItem(hotbarIndex, ItemStack.EMPTY);
                 actions++;
@@ -272,14 +281,14 @@ public final class ShiftBulkQuickMove {
                         finish("slot-gitti");
                         return;
                     }
-                    client.gameMode.handleInventoryMouseClick(handler.containerId, targetRealId, best, ClickType.SWAP, client.player);
+                    client.gameMode.handleContainerInput(handler.containerId, targetRealId, best, ContainerInput.SWAP, client.player);
                 } else {
                     int srcRealId = VanillaClickExecutor.realSlotId(handler, inv, best);
                     if (srcRealId == -1) {
                         finish("slot-gitti");
                         return;
                     }
-                    client.gameMode.handleInventoryMouseClick(handler.containerId, srcRealId, hotbarIndex, ClickType.SWAP, client.player);
+                    client.gameMode.handleContainerInput(handler.containerId, srcRealId, hotbarIndex, ContainerInput.SWAP, client.player);
                 }
                 ItemStack moved = moving;
                 inv.setItem(best, ItemStack.EMPTY);
@@ -311,8 +320,8 @@ public final class ShiftBulkQuickMove {
                     int srcRealId = VanillaClickExecutor.realSlotId(handler, inv, idx);
                     if (srcRealId == -1) continue;
                     int beforeCount = s.getCount();
-                    client.gameMode.handleInventoryMouseClick(handler.containerId, srcRealId, 0, ClickType.PICKUP, client.player);
-                    client.gameMode.handleInventoryMouseClick(handler.containerId, targetRealId, 0, ClickType.PICKUP, client.player);
+                    client.gameMode.handleContainerInput(handler.containerId, srcRealId, 0, ContainerInput.PICKUP, client.player);
+                    client.gameMode.handleContainerInput(handler.containerId, targetRealId, 0, ContainerInput.PICKUP, client.player);
                     ItemStack t = targetStack.copy();
                     t.setCount(targetStack.getCount() + beforeCount);
                     inv.setItem(hotbarIndex, t);
@@ -350,14 +359,14 @@ public final class ShiftBulkQuickMove {
                 // bütün-yığın her zaman sığar, imleç-güvenli).
                 ItemStack movingSrc = s.copy();
                 if (emptyIdx < 9 && srcIdx < 9) {
-                    client.gameMode.handleInventoryMouseClick(handler.containerId, srcRealId, emptyIdx, ClickType.SWAP, client.player);
+                    client.gameMode.handleContainerInput(handler.containerId, srcRealId, emptyIdx, ContainerInput.SWAP, client.player);
                 } else if (emptyIdx < 9) {
-                    client.gameMode.handleInventoryMouseClick(handler.containerId, srcRealId, emptyIdx, ClickType.SWAP, client.player);
+                    client.gameMode.handleContainerInput(handler.containerId, srcRealId, emptyIdx, ContainerInput.SWAP, client.player);
                 } else if (srcIdx < 9) {
-                    client.gameMode.handleInventoryMouseClick(handler.containerId, emptyRealId, srcIdx, ClickType.SWAP, client.player);
+                    client.gameMode.handleContainerInput(handler.containerId, emptyRealId, srcIdx, ContainerInput.SWAP, client.player);
                 } else {
-                    client.gameMode.handleInventoryMouseClick(handler.containerId, srcRealId, 0, ClickType.PICKUP, client.player);
-                    client.gameMode.handleInventoryMouseClick(handler.containerId, emptyRealId, 0, ClickType.PICKUP, client.player);
+                    client.gameMode.handleContainerInput(handler.containerId, srcRealId, 0, ContainerInput.PICKUP, client.player);
+                    client.gameMode.handleContainerInput(handler.containerId, emptyRealId, 0, ContainerInput.PICKUP, client.player);
                 }
                 ItemStack moved = movingSrc;
                 inv.setItem(emptyIdx, moved);
@@ -403,10 +412,9 @@ public final class ShiftBulkQuickMove {
             if (now - lastStallMsgMs < 10000) return;
             lastStallMsgMs = now;
             if (client.player == null) return;
-            client.player.displayClientMessage(
+            client.player.sendSystemMessage(
                 net.minecraft.network.chat.Component.translatable("betterhotbarswap.msg.stalled")
-                    .withStyle(net.minecraft.ChatFormatting.RED),
-                false);
+                    .withStyle(net.minecraft.ChatFormatting.RED));
         } catch (Exception ignored) {
         }
     }

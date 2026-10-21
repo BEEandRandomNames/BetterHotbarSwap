@@ -5,9 +5,10 @@ import com.betterhotbarswap.config.BHSConfigScreen;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
+import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import org.lwjgl.glfw.GLFW;
-import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
+import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
+import net.minecraft.resources.Identifier;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import com.betterhotbarswap.client.debug.BHSDebug;
@@ -15,7 +16,9 @@ import com.betterhotbarswap.client.debug.BHSDebug;
 public final class BetterHotbarSwapClient implements ClientModInitializer {
     // Açılış damgası: HANGİ build'in çalıştığını latest.log'dan kanıtlar
     // (bayat-build testlerini bitirir). Her dağıtımdan önce BUMP edilir.
-    private static final String BUILD_ID = "2026-10-21-1.21a";
+    private static final String BUILD_ID = "2026-10-22-26.1c";
+    // 26.1+: tuş kategorisi kayıtlı nesne; adı "key.category.betterhotbarswap.main" (dil dosyaları).
+    public static final KeyMapping.Category CATEGORY = KeyMapping.Category.register(Identifier.fromNamespaceAndPath("betterhotbarswap", "main"));
     private static KeyMapping settingsKey;
     private static KeyMapping hotbar10Key;
     private static KeyMapping toolbarsKey;
@@ -45,42 +48,42 @@ public final class BetterHotbarSwapClient implements ClientModInitializer {
         com.betterhotbarswap.BetterHotbarSwap.LOGGER.info("[BHS] init build={}", BUILD_ID);
         BHSConfig.load();
         UpdateChecker.start();
-        settingsKey = KeyBindingHelper.registerKeyBinding(new KeyMapping(
+        settingsKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
             "key.betterhotbarswap.settings",
             InputConstants.Type.KEYSYM,
             GLFW.GLFW_KEY_UNKNOWN,
-            "category.betterhotbarswap"
+            CATEGORY
         ));
-        hotbar10Key = KeyBindingHelper.registerKeyBinding(new KeyMapping(
+        hotbar10Key = KeyMappingHelper.registerKeyMapping(new KeyMapping(
             "key.betterhotbarswap.hotbar10",
             InputConstants.Type.KEYSYM,
             GLFW.GLFW_KEY_UNKNOWN,
-            "category.betterhotbarswap"
+            CATEGORY
         ));
         // Araç çubukları ekranı: varsayılan H (vanilla'da boş), Kontroller'den değişir.
-        toolbarsKey = KeyBindingHelper.registerKeyBinding(new KeyMapping(
+        toolbarsKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
             "key.betterhotbarswap.toolbars",
             InputConstants.Type.KEYSYM,
             GLFW.GLFW_KEY_H,
-            "category.betterhotbarswap"
+            CATEGORY
         ));
         // Varsayılan N/M: vanilla'da boş.
-        toolbarSaveKey = KeyBindingHelper.registerKeyBinding(new KeyMapping(
+        toolbarSaveKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
             "key.betterhotbarswap.toolbar_save",
             InputConstants.Type.KEYSYM,
             GLFW.GLFW_KEY_N,
-            "category.betterhotbarswap"
+            CATEGORY
         ));
-        toolbarLoadKey = KeyBindingHelper.registerKeyBinding(new KeyMapping(
+        toolbarLoadKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
             "key.betterhotbarswap.toolbar_load",
             InputConstants.Type.KEYSYM,
             GLFW.GLFW_KEY_M,
-            "category.betterhotbarswap"
+            CATEGORY
         ));
 
         ClientTickEvents.START_CLIENT_TICK.register(com.betterhotbarswap.client.toolbar.SurvivalToolbars::onStartTick);
         ClientTickEvents.END_CLIENT_TICK.register(BetterHotbarSwapClient::onClientTick);
-        HudRenderCallback.EVENT.register((drawContext, tickDelta) -> BHSDebug.render(drawContext));
+        HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("betterhotbarswap", "debug"), (graphics, delta) -> BHSDebug.render(graphics));
     }
 
     private static void onClientTick(Minecraft client) {

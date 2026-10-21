@@ -4,6 +4,8 @@ import com.betterhotbarswap.BetterHotbarSwap;
 import com.betterhotbarswap.client.debug.BHSDebug;
 import com.betterhotbarswap.client.input.HotbarInputController;
 import com.betterhotbarswap.client.input.VanillaClickExecutor;
+import net.minecraft.client.input.CharacterEvent;
+import net.minecraft.client.input.KeyEvent;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -47,18 +49,17 @@ public class CreativeInventoryScreenHotbarMixin {
     // Tüm envanterin kompakt fotoğrafı (sadece dolu slotlar). latest.log'a [BHS-INV] ile düşer.
     private static String snapshot(Inventory inv) {
         StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < inv.items.size(); i++) {
-            ItemStack s = inv.items.get(i);
+        for (int i = 0; i < inv.getNonEquipmentItems().size(); i++) {
+            ItemStack s = inv.getNonEquipmentItems().get(i);
             if (!s.isEmpty()) sb.append(i).append('=').append(shortStack(s)).append(';');
         }
-        for (int i = 0; i < inv.armor.size(); i++) {
-            ItemStack s = inv.armor.get(i);
+        // 1.21.5+: zırh/sol el ayrı liste değil; getItem 36-39 zırh, 40 sol el.
+        for (int i = 0; i < 4; i++) {
+            ItemStack s = inv.getItem(36 + i);
             if (!s.isEmpty()) sb.append('a').append(i).append('=').append(shortStack(s)).append(';');
         }
-        for (int i = 0; i < inv.offhand.size(); i++) {
-            ItemStack s = inv.offhand.get(i);
-            if (!s.isEmpty()) sb.append("off=").append(shortStack(s)).append(';');
-        }
+        ItemStack off = inv.getItem(Inventory.SLOT_OFFHAND);
+        if (!off.isEmpty()) sb.append("off=").append(shortStack(off)).append(';');
         return sb.length() == 0 ? "empty" : sb.toString();
     }
     // Hotbar Önceliği: basılan slot hariç, basılana en yakın boş hotbar slotu. Eşitlikte küçük index kazanır.
@@ -122,7 +123,9 @@ public class CreativeInventoryScreenHotbarMixin {
             && !VanillaClickExecutor.idsTrustworthy(handler);
     }
     @Inject(method = "keyPressed", at = @At("HEAD"), cancellable = true)
-    private void betterhotbarswap$keyPressed(int keyCode, int scanCode, int modifiers, CallbackInfoReturnable<Boolean> cir) {
+    private void betterhotbarswap$keyPressed(KeyEvent event, CallbackInfoReturnable<Boolean> cir) {
+        int keyCode = event.key();
+        int scanCode = event.scancode();
         Minecraft client = Minecraft.getInstance();
         if (client.player == null || client.gameMode == null) return;
         // Oyuncunun gerçek bağları (V/R gibi remap'ler dahil, bug #13).
@@ -136,7 +139,7 @@ public class CreativeInventoryScreenHotbarMixin {
         }
         CreativeModeInventoryScreen screen = (CreativeModeInventoryScreen)(Object)this;
         int prevSelMixed = -1;
-        try { prevSelMixed = client.player.getInventory().selected; } catch (Exception ignored) {}
+        try { prevSelMixed = client.player.getInventory().getSelectedSlot(); } catch (Exception ignored) {}
         Slot focusedSlot = ((HandledScreenAccessor) screen).betterhotbarswap$getFocusedSlot();
         BHSDebug.update(focusedSlot, hotbarIndex);
         if (focusedSlot == null) {
@@ -250,13 +253,13 @@ public class CreativeInventoryScreenHotbarMixin {
             // Drop BAŞARISIZ olursa eski korunur (sessiz silme YOK).
             boolean dropped = false;
             if (remaining > 0) {
-                int prevSel = playerInv.selected;
+                int prevSel = playerInv.getSelectedSlot();
                 try {
-                    playerInv.selected = hotbarIndex;
+                    playerInv.setSelectedSlot(hotbarIndex);
                     client.player.connection.send(new ServerboundSetCarriedItemPacket(hotbarIndex));
                     dropped = client.player.drop(true);
                 } finally {
-                    playerInv.selected = prevSel;
+                    playerInv.setSelectedSlot(prevSel);
                     try { client.player.connection.send(new ServerboundSetCarriedItemPacket(prevSel)); } catch (Exception ignored) {}
                 }
                 if (!dropped) {
@@ -319,14 +322,15 @@ public class CreativeInventoryScreenHotbarMixin {
     }
 
     @Inject(method = "charTyped", at = @At("HEAD"), cancellable = true)
-    private void betterhotbarswap$charTyped(char chr, int modifiers, CallbackInfoReturnable<Boolean> cir) {        // GLFW tuş olayından bağımsız karakter olayı da gelir; keyPressed'i iptal etmek
+    private void betterhotbarswap$charTyped(CharacterEvent event, CallbackInfoReturnable<Boolean> cir) {
+        char chr = (char) event.codepoint();        // GLFW tuş olayından bağımsız karakter olayı da gelir; keyPressed'i iptal etmek
         // aramaya sızmasını engellemez. Item slotu üstündeyken + (rakam VEYA az önce
         // hotkey takası olduysa) gelen karakter = hotkey'dir, yutulur.
         Minecraft client = Minecraft.getInstance();
         if (client.player == null) return;
         CreativeModeInventoryScreen screen = (CreativeModeInventoryScreen)(Object)this;
         int prevSelMixed = -1;
-        try { prevSelMixed = client.player.getInventory().selected; } catch (Exception ignored) {}
+        try { prevSelMixed = client.player.getInventory().getSelectedSlot(); } catch (Exception ignored) {}
         Slot focusedSlot = ((HandledScreenAccessor) screen).betterhotbarswap$getFocusedSlot();
         boolean onListItem = focusedSlot != null && focusedSlot.hasItem()
             && !(focusedSlot.container instanceof Inventory);

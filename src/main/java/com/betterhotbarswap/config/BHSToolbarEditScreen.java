@@ -3,9 +3,11 @@ package com.betterhotbarswap.config;
 import com.betterhotbarswap.client.toolbar.SurvivalToolbars;
 import com.betterhotbarswap.client.toolbar.ToolbarStorage;
 import java.util.List;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
@@ -95,8 +97,11 @@ public final class BHSToolbarEditScreen extends Screen {
     }
 
     @Override
-    public boolean mouseClicked(double mx, double my, int button) {
-        if (super.mouseClicked(mx, my, button)) return true;
+    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        if (super.mouseClicked(event, doubleClick)) return true;
+        double mx = event.x();
+        double my = event.y();
+        int button = event.button();
         if (button != 0 && button != 1) return false;
         int t = slotAt(mx, my);
         if (t == -1) {
@@ -108,18 +113,19 @@ public final class BHSToolbarEditScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
-        super.render(context, mouseX, mouseY, delta); // 1.20.2+: Screen.render arka plan + düğmeleri çizer; içerik üstüne
-        context.drawCenteredString(font, title, width / 2, 12, 0xFFFFFF);
+    public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
+        // 26.1+: render -> extractRenderState; çizim sırası katmanı belirler (z yok), renkler ARGB.
+        super.extractRenderState(context, mouseX, mouseY, delta);
+        context.centeredText(font, title, width / 2, 12, 0xFFFFFFFF);
         int ty = 24;
         for (FormattedCharSequence line : font.split(Component.translatable("betterhotbarswap.toolbar.edit_help"), width - 40)) {
-            context.drawCenteredString(font, line, width / 2, ty, 0xA0A0A0);
+            context.centeredText(font, line, width / 2, ty, 0xFFA0A0A0);
             ty += 10;
         }
         panel(context, px, py, PANEL_W, PANEL_H);
         // Sol el slotu için küçük panel (vanilla HUD'daki gibi hotbar'ın solunda).
         panel(context, px + OFF_X - 4, py + 71, 26, 26);
-        context.drawString(font, Component.translatable("container.inventory"), px + 8, py + 6, 0x404040, false);
+        context.text(font, Component.translatable("container.inventory"), px + 8, py + 6, 0xFF404040, false);
         Inventory inv = minecraft.player != null ? minecraft.player.getInventory() : null;
         int hovered = slotAt(mouseX, mouseY);
         for (int t = 0; t < ToolbarStorage.SIZE; t++) {
@@ -127,25 +133,21 @@ public final class BHSToolbarEditScreen extends Screen {
             int y = sy(t);
             slot(context, x, y);
             ItemStack st = slots[t];
-            // Boş sol el: vanilla'nın kalkan silüeti (kaynak paketine de uyar).
+            // Boş sol el: vanilla'nın kalkan silüeti (GUI sprite'ı; kaynak paketine de uyar).
             if (t == ToolbarStorage.OFFHAND && st.isEmpty()) {
-                context.blit(x + 1, y + 1, 0, 16, 16, minecraft.getTextureAtlas(
-                    net.minecraft.world.inventory.InventoryMenu.BLOCK_ATLAS)
-                    .apply(net.minecraft.world.inventory.InventoryMenu.EMPTY_ARMOR_SLOT_SHIELD));
+                context.blitSprite(RenderPipelines.GUI_TEXTURED,
+                    net.minecraft.world.inventory.InventoryMenu.EMPTY_ARMOR_SLOT_SHIELD, x + 1, y + 1, 16, 16);
             }
-            context.renderItem(st, x + 1, y + 1);
-            context.renderItemDecorations(font, st, x + 1, y + 1);
-            if (inv != null && !st.isEmpty() && !has(inv, st)) context.fill(x + 1, y + 1, x + 17, y + 17, 300, 0x66FF0000);
-            if (t == hovered) context.fill(x + 1, y + 1, x + 17, y + 17, 300, 0x80FFFFFF);
+            context.item(st, x + 1, y + 1);
+            context.itemDecorations(font, st, x + 1, y + 1);
+            if (inv != null && !st.isEmpty() && !has(inv, st)) context.fill(x + 1, y + 1, x + 17, y + 17, 0x66FF0000);
+            if (t == hovered) context.fill(x + 1, y + 1, x + 17, y + 17, 0x80FFFFFF);
         }
         if (!cursor.isEmpty()) {
-            context.pose().pushPose();
-            context.pose().translate(0, 0, 400);
-            context.renderItem(cursor, mouseX - 8, mouseY - 8);
-            context.renderItemDecorations(font, cursor, mouseX - 8, mouseY - 8);
-            context.pose().popPose();
+            context.item(cursor, mouseX - 8, mouseY - 8);
+            context.itemDecorations(font, cursor, mouseX - 8, mouseY - 8);
         } else if (hovered >= 0 && !slots[hovered].isEmpty()) {
-            context.renderTooltip(font, slots[hovered], mouseX, mouseY);
+            context.setTooltipForNextFrame(font, slots[hovered], mouseX, mouseY);
         }
     }
 
@@ -155,7 +157,7 @@ public final class BHSToolbarEditScreen extends Screen {
     }
 
     // Vanilla konteyner paneli: siyah çerçeve, beyaz üst-sol / koyu alt-sağ kabartma, C6C6C6 gövde.
-    private static void panel(GuiGraphics c, int x, int y, int w, int h) {
+    private static void panel(GuiGraphicsExtractor c, int x, int y, int w, int h) {
         c.fill(x, y, x + w, y + h, 0xFF000000);
         c.fill(x + 1, y + 1, x + w - 1, y + h - 1, 0xFFFFFFFF);
         c.fill(x + 3, y + 3, x + w - 1, y + h - 1, 0xFF555555);
@@ -163,7 +165,7 @@ public final class BHSToolbarEditScreen extends Screen {
     }
 
     // Vanilla çökük slot (18x18).
-    static void slot(GuiGraphics c, int x, int y) {
+    static void slot(GuiGraphicsExtractor c, int x, int y) {
         c.fill(x, y, x + 18, y + 18, 0xFF373737);
         c.fill(x + 1, y + 1, x + 18, y + 18, 0xFFFFFFFF);
         c.fill(x + 1, y + 1, x + 17, y + 17, 0xFF8B8B8B);

@@ -838,7 +838,7 @@ public class VanillaClickExecutor {
         if (hotbarStdId == -1 || focusedStdId == -1) return false;
         playerInv.setStack(hotbarIndex, focusedStack);
         playerInv.setStack(target.getIndex(), oldHotbarStack);
-        client.interactionManager.clickCreativeStack(focusedStack, hotbarStdId);
+        client.player.playerScreenHandler.sendContentUpdates();
         BHSDebug.log("SEND creative-stack " + focusedStack.getName().getString() + "x" + focusedStack.getCount()
             + " -> hotbar" + (hotbarIndex + 1) + " (stdSlot=" + hotbarStdId + ")");
         final int actionId = ++creativeActionSeq;
@@ -868,7 +868,7 @@ public class VanillaClickExecutor {
             int secondStdId = playerStandardId(target.getIndex());
             if (secondStdId != -1) {
                 client.player.getInventory().setStack(target.getIndex(), oldHotbarStack);
-                client.interactionManager.clickCreativeStack(oldHotbarStack, secondStdId);
+                client.player.playerScreenHandler.sendContentUpdates();
             }
         });
         return true;

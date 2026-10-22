@@ -15,7 +15,7 @@ import com.betterhotbarswap.client.debug.BHSDebug;
 public final class BetterHotbarSwapClient implements ClientModInitializer {
     // Açılış damgası: HANGİ build'in çalıştığını latest.log'dan kanıtlar
     // (bayat-build testlerini bitirir). Her dağıtımdan önce BUMP edilir.
-    private static final String BUILD_ID = "2026-10-22-1.20.4f";
+    private static final String BUILD_ID = "2026-10-22-1.20.4g";
     private static KeyBinding settingsKey;
     private static KeyBinding hotbar10Key;
     private static KeyBinding toolbarsKey;

@@ -59,9 +59,9 @@ public final class UpdateChecker {
 
     // Ana menü görününce (istek geç dönerse de) bir kez sorar.
     public static void onTick(Minecraft client) {
-        if (shown || newVersion == null || !(client.screen instanceof TitleScreen)) return;
+        if (shown || newVersion == null || !(client.gui.screen() instanceof TitleScreen)) return;
         shown = true;
-        client.setScreen(new BHSUpdateScreen(client.screen, newVersion, pageUrl()));
+        client.gui.setScreen(new BHSUpdateScreen(client.gui.screen(), newVersion, pageUrl()));
     }
 
     // Yanıttaki en yüksek mod sürümü yüklüden büyükse onu döner, değilse null.

@@ -838,7 +838,7 @@ public class VanillaClickExecutor {
         if (hotbarStdId == -1 || focusedStdId == -1) return false;
         playerInv.setItem(hotbarIndex, focusedStack);
         playerInv.setItem(target.getContainerSlot(), oldHotbarStack);
-        client.gameMode.handleCreativeModeItemAdd(focusedStack, hotbarStdId);
+        client.player.inventoryMenu.broadcastChanges();
         BHSDebug.log("SEND creative-stack " + focusedStack.getHoverName().getString() + "x" + focusedStack.getCount()
             + " -> hotbar" + (hotbarIndex + 1) + " (stdSlot=" + hotbarStdId + ")");
         final int actionId = ++creativeActionSeq;
@@ -868,7 +868,7 @@ public class VanillaClickExecutor {
             int secondStdId = playerStandardId(target.getContainerSlot());
             if (secondStdId != -1) {
                 client.player.getInventory().setItem(target.getContainerSlot(), oldHotbarStack);
-                client.gameMode.handleCreativeModeItemAdd(oldHotbarStack, secondStdId);
+                client.player.inventoryMenu.broadcastChanges();
             }
         });
         return true;

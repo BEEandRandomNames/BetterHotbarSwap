@@ -31,9 +31,9 @@ public final class BHSConfigScreen extends Screen {
         toggle(1, y + 24, "survival_toolbars", BHSConfig.survivalToolbars, v -> BHSConfig.survivalToolbars = v);
         toggle(0, y + 48, "debug", BHSConfig.debugEnabled, v -> BHSConfig.debugEnabled = v);
         addRenderableWidget(Button.builder(Component.translatable("betterhotbarswap.settings.toolbars"),
-            b -> minecraft.setScreen(new BHSToolbarScreen(this))).bounds(colX(0), y + 84, 150, 20).build());
+            b -> minecraft.gui.setScreen(new BHSToolbarScreen(this))).bounds(colX(0), y + 84, 150, 20).build());
         addRenderableWidget(Button.builder(Component.translatable("betterhotbarswap.settings.keys"),
-            b -> minecraft.setScreen(keybindsAtOurCategory())).bounds(colX(1), y + 84, 150, 20).build());
+            b -> minecraft.gui.setScreen(keybindsAtOurCategory())).bounds(colX(1), y + 84, 150, 20).build());
         addRenderableWidget(Button.builder(CommonComponents.GUI_DONE, b -> onClose())
             .bounds(width / 2 - 100, y + 120, 200, 20).build());
     }
@@ -99,7 +99,7 @@ public final class BHSConfigScreen extends Screen {
     public void onClose() {
         BHSConfig.save();
         if (minecraft != null) {
-            minecraft.setScreen(parent);
+            minecraft.gui.setScreen(parent);
         }
     }
 

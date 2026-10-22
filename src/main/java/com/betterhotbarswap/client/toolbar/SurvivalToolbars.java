@@ -30,9 +30,10 @@ public final class SurvivalToolbars {
 
     // START_CLIENT_TICK: vanilla handleInputEvents'ten ÖNCE çalışır; kısayolun
     // wasPressed'ini tüketir -> vanilla slot seçmez / creative çubuğu vermez.
+    // 26.2+: açık ekran ve ekran açma Minecraft.gui altında (gui.screen(), gui.setScreen).
     public static void onStartTick(Minecraft client) {
         if (!BHSConfig.survivalToolbars) return;
-        if (client.player == null || client.screen != null) return;
+        if (client.player == null || client.gui.screen() != null) return;
         KeyMapping modSave = BetterHotbarSwapClient.getToolbarSaveKey();
         KeyMapping modLoad = BetterHotbarSwapClient.getToolbarLoadKey();
         boolean mod = modSave.isDown() || modLoad.isDown();
@@ -76,9 +77,9 @@ public final class SurvivalToolbars {
         for (int t = 0; t < ToolbarStorage.SIZE; t++) tpl.set(t, client.player.getInventory().getItem(invIndex(t)).copy());
         storage(client).save();
         // Vanilla'nın kendi mesajı: "Araç çubuğu kaydedildi (X+N ile geri yükle)".
-        client.gui.setOverlayMessage(Component.translatable("inventory.hotbarSaved",
+        client.player.sendOverlayMessage(Component.translatable("inventory.hotbarSaved",
             loadKey.getTranslatedKeyMessage(),
-            client.options.keyHotbarSlots[index].getTranslatedKeyMessage()), false);
+            client.options.keyHotbarSlots[index].getTranslatedKeyMessage()));
         BHSDebug.log("TOOLBAR save " + (index + 1));
     }
 
@@ -189,6 +190,6 @@ public final class SurvivalToolbars {
     }
 
     private static void message(Minecraft client, Component text) {
-        client.gui.setOverlayMessage(text, false);
+        client.player.sendOverlayMessage(text);
     }
 }

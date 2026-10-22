@@ -153,7 +153,7 @@ public final class TidyCollect {
     public static boolean isTidyScreen(AbstractContainerMenu h) {
         Minecraft client = Minecraft.getInstance();
         if (client == null || client.player == null || h == null) return false;
-        if (client.screen instanceof net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen) return false;
+        if (client.gui.screen() instanceof net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen) return false;
         return isPureStorage(h, client.player.getInventory());
     }
 

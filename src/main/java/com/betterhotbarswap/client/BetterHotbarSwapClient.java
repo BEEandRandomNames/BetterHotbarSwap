@@ -16,7 +16,7 @@ import com.betterhotbarswap.client.debug.BHSDebug;
 public final class BetterHotbarSwapClient implements ClientModInitializer {
     // Açılış damgası: HANGİ build'in çalıştığını latest.log'dan kanıtlar
     // (bayat-build testlerini bitirir). Her dağıtımdan önce BUMP edilir.
-    private static final String BUILD_ID = "2026-10-22-26.1.2a";
+    private static final String BUILD_ID = "2026-10-22-26.2b";
     // 26.1+: tuş kategorisi kayıtlı nesne; adı "key.category.betterhotbarswap.main" (dil dosyaları).
     public static final KeyMapping.Category CATEGORY = KeyMapping.Category.register(Identifier.fromNamespaceAndPath("betterhotbarswap", "main"));
     private static KeyMapping settingsKey;
@@ -88,10 +88,10 @@ public final class BetterHotbarSwapClient implements ClientModInitializer {
 
     private static void onClientTick(Minecraft client) {
         while (settingsKey.consumeClick()) {
-            client.setScreen(new BHSConfigScreen(client.screen));
+            client.gui.setScreen(new BHSConfigScreen(client.gui.screen()));
         }
         while (toolbarsKey.consumeClick()) {
-            client.setScreen(new com.betterhotbarswap.config.BHSToolbarScreen(client.screen));
+            client.gui.setScreen(new com.betterhotbarswap.config.BHSToolbarScreen(client.gui.screen()));
         }
         com.betterhotbarswap.client.input.ShiftBulkQuickMove.onTick(client);
         UpdateChecker.onTick(client);

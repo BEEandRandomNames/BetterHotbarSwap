@@ -167,7 +167,7 @@ public final class BHSToolbarScreen extends Screen {
         for (int r = scroll; r < Math.min(shown.size(), scroll + visible); r++) {
             int y = rowY(r);
             if (button == 0 && mx >= left + 14 && mx < left + 14 + HOTBAR_W && my >= y && my < y + 22) {
-                minecraft.setScreen(new BHSToolbarEditScreen(this, shown.get(r)));
+                minecraft.gui.setScreen(new BHSToolbarEditScreen(this, shown.get(r)));
                 return true;
             }
         }
@@ -231,7 +231,7 @@ public final class BHSToolbarScreen extends Screen {
 
     @Override
     public void onClose() {
-        if (minecraft != null) minecraft.setScreen(parent);
+        if (minecraft != null) minecraft.gui.setScreen(parent);
     }
 
     @Override

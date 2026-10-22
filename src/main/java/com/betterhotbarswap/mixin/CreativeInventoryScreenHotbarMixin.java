@@ -93,6 +93,11 @@ public class CreativeInventoryScreenHotbarMixin {
         }
         return order;
     }
+    // #47: creative ekranında sunucuya ASLA doğrudan slot paketi atılmaz. Vanilla gibi:
+    // eşya yerelde değişir, oyuncu menüsünün değişiklik yayını farkı CreativeInventoryListener
+    // ile gönderir VE izleme kaydını günceller. Doğrudan paket kaydı bayat bırakıyordu:
+    // sonradan alınan/taşınan eşyanın değişimi "zaten öyle" sanılıp gönderilmiyordu -> silinen
+    // eşya sunucuda kalıyor, taşınan eşya çoğalıyordu (26.2'de bulundu, 2026-10-22).
     // Kısmi aynı yığına ekle (mutlak tahmin + paket). Dönüş: taşınan miktar.
     private static int mergeInto(MinecraftClient client, PlayerInventory inv, int idx, ItemStack old, int remaining, StringBuilder moves) {
         ItemStack s = inv.getStack(idx);
@@ -101,7 +106,7 @@ public class CreativeInventoryScreenHotbarMixin {
         ItemStack updated = s.copy();
         updated.setCount(s.getCount() + move);
         inv.setStack(idx, updated);
-        client.interactionManager.clickCreativeStack(updated, survivalSlotId(idx));
+        client.player.playerScreenHandler.sendContentUpdates();
         moves.append(" +").append(move).append("->").append(idx < 9 ? "hb" + (idx + 1) : "m" + idx);
         return move;
     }
@@ -153,7 +158,7 @@ public class CreativeInventoryScreenHotbarMixin {
             ItemStack condemned = playerInv.getStack(hotbarIndex).copy();
             if (!condemned.isEmpty()) {
                 playerInv.setStack(hotbarIndex, ItemStack.EMPTY);
-                client.interactionManager.clickCreativeStack(ItemStack.EMPTY, survivalSlotId(hotbarIndex));
+                client.player.playerScreenHandler.sendContentUpdates();
                 BHSDebug.log("DELETE hb" + (hotbarIndex + 1) + " " + shortStack(condemned));
             } else {
                 BHSDebug.log("DELETE hb" + (hotbarIndex + 1) + " (zaten boş)");
@@ -216,7 +221,7 @@ public class CreativeInventoryScreenHotbarMixin {
         String what = BHSDebug.describeSlot(focusedSlot, client.player);
         if (oldHotbarStack.isEmpty()) {
             playerInv.setStack(hotbarIndex, newStack);
-            client.interactionManager.clickCreativeStack(newStack, hotbarSurvivalId);
+            client.player.playerScreenHandler.sendContentUpdates();
             BHSDebug.log("CREATIVE " + what + " -> hotbar" + (hotbarIndex + 1) + " x" + newStack.getCount() + " (bos sid=" + hotbarSurvivalId + ")" + hands(client));
         } else {
             // Verimlilik zinciri (F2) - sıra önemli, paketler aynı tick'te sırayla gider:
@@ -242,7 +247,7 @@ public class CreativeInventoryScreenHotbarMixin {
                     ItemStack rest = oldHotbarStack.copy();
                     rest.setCount(remaining);
                     playerInv.setStack(overflowInvIndex, rest);
-                    client.interactionManager.clickCreativeStack(rest, survivalSlotId(overflowInvIndex));
+                    client.player.playerScreenHandler.sendContentUpdates();
                     overflowWhere = overflowInvIndex < 9 ? "hb" + (overflowInvIndex + 1) : "m" + overflowInvIndex;
                     remaining = 0;
                 }
@@ -273,7 +278,7 @@ public class CreativeInventoryScreenHotbarMixin {
             }
             // 4. yeni her zaman basılan slota
             playerInv.setStack(hotbarIndex, newStack);
-            client.interactionManager.clickCreativeStack(newStack, hotbarSurvivalId);
+            client.player.playerScreenHandler.sendContentUpdates();
             final int finalHotbarIndex = hotbarIndex;
             final ItemStack finalNewStack = newStack;
             final int finalHotbarSurvivalId = hotbarSurvivalId;
@@ -306,7 +311,7 @@ public class CreativeInventoryScreenHotbarMixin {
                     }
                 } catch (Exception ignored) {}
                 client.player.getInventory().setStack(finalHotbarIndex, finalNewStack);
-                client.interactionManager.clickCreativeStack(finalNewStack, finalHotbarSurvivalId);
+                client.player.playerScreenHandler.sendContentUpdates();
             });
             BHSDebug.log("CREATIVE " + what + " -> hotbar" + (hotbarIndex + 1) + " x" + newStack.getCount()
                 + " (stack:" + (moves.length() == 0 ? "-" : moves)

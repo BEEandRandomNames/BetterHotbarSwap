@@ -92,6 +92,11 @@ public class CreativeInventoryScreenHotbarMixin {
         }
         return order;
     }
+    // #47: creative ekranında sunucuya ASLA doğrudan slot paketi atılmaz. Vanilla gibi:
+    // eşya yerelde değişir, oyuncu menüsünün değişiklik yayını farkı CreativeInventoryListener
+    // ile gönderir VE izleme kaydını günceller. Doğrudan paket kaydı bayat bırakıyordu:
+    // sonradan alınan/taşınan eşyanın değişimi "zaten öyle" sanılıp gönderilmiyordu -> silinen
+    // eşya sunucuda kalıyor, taşınan eşya çoğalıyordu (26.2'de bulundu, 2026-10-22).
     // Kısmi aynı yığına ekle (mutlak tahmin + paket). Dönüş: taşınan miktar.
     private static int mergeInto(Minecraft client, Inventory inv, int idx, ItemStack old, int remaining, StringBuilder moves) {
         ItemStack s = inv.getItem(idx);
@@ -100,7 +105,7 @@ public class CreativeInventoryScreenHotbarMixin {
         ItemStack updated = s.copy();
         updated.setCount(s.getCount() + move);
         inv.setItem(idx, updated);
-        client.gameMode.handleCreativeModeItemAdd(updated, survivalSlotId(idx));
+        client.player.inventoryMenu.broadcastChanges();
         moves.append(" +").append(move).append("->").append(idx < 9 ? "hb" + (idx + 1) : "m" + idx);
         return move;
     }
@@ -154,7 +159,7 @@ public class CreativeInventoryScreenHotbarMixin {
             ItemStack condemned = playerInv.getItem(hotbarIndex).copy();
             if (!condemned.isEmpty()) {
                 playerInv.setItem(hotbarIndex, ItemStack.EMPTY);
-                client.gameMode.handleCreativeModeItemAdd(ItemStack.EMPTY, survivalSlotId(hotbarIndex));
+                client.player.inventoryMenu.broadcastChanges();
                 BHSDebug.log("DELETE hb" + (hotbarIndex + 1) + " " + shortStack(condemned));
             } else {
                 BHSDebug.log("DELETE hb" + (hotbarIndex + 1) + " (zaten boş)");
@@ -217,7 +222,7 @@ public class CreativeInventoryScreenHotbarMixin {
         String what = BHSDebug.describeSlot(focusedSlot, client.player);
         if (oldHotbarStack.isEmpty()) {
             playerInv.setItem(hotbarIndex, newStack);
-            client.gameMode.handleCreativeModeItemAdd(newStack, hotbarSurvivalId);
+            client.player.inventoryMenu.broadcastChanges();
             BHSDebug.log("CREATIVE " + what + " -> hotbar" + (hotbarIndex + 1) + " x" + newStack.getCount() + " (bos sid=" + hotbarSurvivalId + ")" + hands(client));
         } else {
             // Verimlilik zinciri (F2) - sıra önemli, paketler aynı tick'te sırayla gider:
@@ -243,7 +248,7 @@ public class CreativeInventoryScreenHotbarMixin {
                     ItemStack rest = oldHotbarStack.copy();
                     rest.setCount(remaining);
                     playerInv.setItem(overflowInvIndex, rest);
-                    client.gameMode.handleCreativeModeItemAdd(rest, survivalSlotId(overflowInvIndex));
+                    client.player.inventoryMenu.broadcastChanges();
                     overflowWhere = overflowInvIndex < 9 ? "hb" + (overflowInvIndex + 1) : "m" + overflowInvIndex;
                     remaining = 0;
                 }
@@ -274,7 +279,7 @@ public class CreativeInventoryScreenHotbarMixin {
             }
             // 4. yeni her zaman basılan slota
             playerInv.setItem(hotbarIndex, newStack);
-            client.gameMode.handleCreativeModeItemAdd(newStack, hotbarSurvivalId);
+            client.player.inventoryMenu.broadcastChanges();
             final int finalHotbarIndex = hotbarIndex;
             final ItemStack finalNewStack = newStack;
             final int finalHotbarSurvivalId = hotbarSurvivalId;
@@ -307,7 +312,7 @@ public class CreativeInventoryScreenHotbarMixin {
                     }
                 } catch (Exception ignored) {}
                 client.player.getInventory().setItem(finalHotbarIndex, finalNewStack);
-                client.gameMode.handleCreativeModeItemAdd(finalNewStack, finalHotbarSurvivalId);
+                client.player.inventoryMenu.broadcastChanges();
             });
             BHSDebug.log("CREATIVE " + what + " -> hotbar" + (hotbarIndex + 1) + " x" + newStack.getCount()
                 + " (stack:" + (moves.length() == 0 ? "-" : moves)

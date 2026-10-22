@@ -59,7 +59,7 @@ public final class ToolbarStorage {
     private static HolderLookup.Provider lookup() {
         Minecraft client = Minecraft.getInstance();
         if (client.level != null) return client.level.registryAccess();
-        if (menuLookup == null) menuLookup = VanillaRegistries.createLookup();
+        if (menuLookup == null) menuLookup = VanillaRegistries.createWorldLookup();
         return menuLookup;
     }
 

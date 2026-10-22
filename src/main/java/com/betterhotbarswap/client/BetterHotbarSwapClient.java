@@ -6,7 +6,6 @@ import com.mojang.blaze3d.platform.InputConstants;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
-import org.lwjgl.glfw.GLFW;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.minecraft.resources.Identifier;
 import net.minecraft.client.KeyMapping;
@@ -16,7 +15,7 @@ import com.betterhotbarswap.client.debug.BHSDebug;
 public final class BetterHotbarSwapClient implements ClientModInitializer {
     // Açılış damgası: HANGİ build'in çalıştığını latest.log'dan kanıtlar
     // (bayat-build testlerini bitirir). Her dağıtımdan önce BUMP edilir.
-    private static final String BUILD_ID = "2026-10-22-26.2c";
+    private static final String BUILD_ID = "2026-10-22-26.3a";
     // 26.1+: tuş kategorisi kayıtlı nesne; adı "key.category.betterhotbarswap.main" (dil dosyaları).
     public static final KeyMapping.Category CATEGORY = KeyMapping.Category.register(Identifier.fromNamespaceAndPath("betterhotbarswap", "main"));
     private static KeyMapping settingsKey;
@@ -50,34 +49,34 @@ public final class BetterHotbarSwapClient implements ClientModInitializer {
         UpdateChecker.start();
         settingsKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
             "key.betterhotbarswap.settings",
-            InputConstants.Type.KEYSYM,
-            GLFW.GLFW_KEY_UNKNOWN,
+            InputConstants.Type.KEYBOARD,
+            InputConstants.UNKNOWN.getValue(),
             CATEGORY
         ));
         hotbar10Key = KeyMappingHelper.registerKeyMapping(new KeyMapping(
             "key.betterhotbarswap.hotbar10",
-            InputConstants.Type.KEYSYM,
-            GLFW.GLFW_KEY_UNKNOWN,
+            InputConstants.Type.KEYBOARD,
+            InputConstants.UNKNOWN.getValue(),
             CATEGORY
         ));
         // Araç çubukları ekranı: varsayılan H (vanilla'da boş), Kontroller'den değişir.
         toolbarsKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
             "key.betterhotbarswap.toolbars",
-            InputConstants.Type.KEYSYM,
-            GLFW.GLFW_KEY_H,
+            InputConstants.Type.KEYBOARD,
+            InputConstants.KEY_H,
             CATEGORY
         ));
         // Varsayılan N/M: vanilla'da boş.
         toolbarSaveKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
             "key.betterhotbarswap.toolbar_save",
-            InputConstants.Type.KEYSYM,
-            GLFW.GLFW_KEY_N,
+            InputConstants.Type.KEYBOARD,
+            InputConstants.KEY_N,
             CATEGORY
         ));
         toolbarLoadKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
             "key.betterhotbarswap.toolbar_load",
-            InputConstants.Type.KEYSYM,
-            GLFW.GLFW_KEY_M,
+            InputConstants.Type.KEYBOARD,
+            InputConstants.KEY_M,
             CATEGORY
         ));
 

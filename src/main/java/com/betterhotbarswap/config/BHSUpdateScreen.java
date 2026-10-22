@@ -1,7 +1,6 @@
 package com.betterhotbarswap.config;
 
 import net.minecraft.ChatFormatting;
-import net.minecraft.util.Util;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
@@ -36,7 +35,7 @@ public final class BHSUpdateScreen extends Screen {
         int y = Math.min(90 + lines.size() * 9 + 20, height - 24);
         int x = width / 2 - (BTN_W * 3 + 8) / 2;
         addRenderableWidget(Button.builder(CommonComponents.GUI_YES.copy().withStyle(ChatFormatting.GREEN), b -> {
-            Util.getPlatform().openUri(url);
+            com.mojang.blaze3d.Blaze3D.openUri(java.net.URI.create(url)); // 26.3+: Util.OS.openUri kalktı
             onClose();
         }).bounds(x, y, BTN_W, 20).build());
         addRenderableWidget(Button.builder(Component.translatable("betterhotbarswap.update.later").withStyle(ChatFormatting.YELLOW), b -> onClose())

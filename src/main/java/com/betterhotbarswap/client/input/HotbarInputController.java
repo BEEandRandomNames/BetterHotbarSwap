@@ -1,5 +1,6 @@
 package com.betterhotbarswap.client.input;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import com.betterhotbarswap.BetterHotbarSwap;
 import com.betterhotbarswap.client.debug.BHSDebug;
 import com.betterhotbarswap.config.BHSConfig;
@@ -46,8 +47,8 @@ public final class HotbarInputController {
         downKeys.remove(keyCode);
         heldKeys.remove(keyCode);
         if (isShiftKey(keyCode)) {
-            shiftLatch = heldKeys.contains(org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_SHIFT)
-                || heldKeys.contains(org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT_SHIFT);
+            shiftLatch = heldKeys.contains(InputConstants.KEY_LSHIFT)
+                || heldKeys.contains(InputConstants.KEY_RSHIFT);
         }
     }
 
@@ -71,8 +72,8 @@ public final class HotbarInputController {
     }
 
     private static boolean isShiftKey(int keyCode) {
-        return keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_SHIFT
-            || keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT_SHIFT;
+        return keyCode == InputConstants.KEY_LSHIFT
+            || keyCode == InputConstants.KEY_RSHIFT;
     }
 
     public static int latchedHotbar() {
@@ -146,8 +147,9 @@ public final class HotbarInputController {
                 }
             }
         }
-        if (keyCode == 48 || keyCode == 320) return 9;
-        if (keyCode >= 321 && keyCode <= 328) return keyCode - 321;
+        // 26.3+: SDL tuş kodları ("0" = 39, numpad1 = 89 ...); sabit sayı değil InputConstants.
+        if (keyCode == InputConstants.KEY_0 || keyCode == InputConstants.KEY_NUMPAD0) return 9;
+        if (keyCode >= InputConstants.KEY_NUMPAD1 && keyCode <= InputConstants.KEY_NUMPAD1 + 7) return keyCode - InputConstants.KEY_NUMPAD1;
         return -1;
     }
 
@@ -156,11 +158,8 @@ public final class HotbarInputController {
     // asla sessiz yutulmaz.
     public static boolean isShiftDown() {
         try {
-            long win = Minecraft.getInstance().getWindow().handle();
-            return org.lwjgl.glfw.GLFW.glfwGetKey(win, org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_SHIFT)
-                    == org.lwjgl.glfw.GLFW.GLFW_PRESS
-                || org.lwjgl.glfw.GLFW.glfwGetKey(win, org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT_SHIFT)
-                    == org.lwjgl.glfw.GLFW.GLFW_PRESS;
+            // 26.3+: giriş GLFW değil SDL; anlık tuş durumu InputConstants'tan.
+            return InputConstants.isKeyDown(InputConstants.KEY_LSHIFT) || InputConstants.isKeyDown(InputConstants.KEY_RSHIFT);
         } catch (Exception e) {
             BHSDebug.log("SHIFT-ERR " + e);
             return false;
@@ -173,8 +172,8 @@ public final class HotbarInputController {
     // downKeys). Harita ilkesi: belirsizse vazgeç, ama yoklama yok.
     public static boolean onKeyPressed(AbstractContainerScreen<?> screen, int keyCode, int scanCode, int modifiers) {
         // Shift latch: basışta kurulur, bırakışta düşer (KeyboardReleaseMixin).
-        if (keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_SHIFT
-            || keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT_SHIFT) {
+        if (keyCode == InputConstants.KEY_LSHIFT
+            || keyCode == InputConstants.KEY_RSHIFT) {
             shiftLatch = true;
             return false;
         }
@@ -201,7 +200,7 @@ public final class HotbarInputController {
         if (hotbarIndex < 0) return false;
         int code = MOUSE_CODE_BASE - button;
         releasePressed(code);
-        return handleHotkey(screen, code, hotbarIndex, shiftLatch ? org.lwjgl.glfw.GLFW.GLFW_MOD_SHIFT : 0);
+        return handleHotkey(screen, code, hotbarIndex, shiftLatch ? InputConstants.MOD_SHIFT : 0);
     }
 
     // Klavye kodlarıyla çakışmayan sahte kod (downKeys kaydı için).
@@ -234,7 +233,7 @@ public final class HotbarInputController {
         // 2026-10-21). Kapalıyken yutulan tekrarlar vanilla'ya gider: tuşu basılı
         // tutunca eşya slot <-> hotbar arasında vanilla gibi gidip gelir.
         boolean swallowRepeat = BHSConfig.tidyCollect;
-        boolean shiftHeld = (modifiers & org.lwjgl.glfw.GLFW.GLFW_MOD_SHIFT) != 0;
+        boolean shiftHeld = (modifiers & InputConstants.MOD_SHIFT) != 0;
         // Latch seeding: Shift GUI DIŞINDA basılı tutulup sonra hotkey'e
         // basılırsa press-olayı hiç gelmez; canlı modifiers bilgisinden öğren.
         if (shiftHeld) shiftLatch = true;

@@ -1,5 +1,6 @@
 package com.betterhotbarswap.config;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import com.betterhotbarswap.client.toolbar.SurvivalToolbars;
 import java.util.ArrayList;
 import java.util.List;
@@ -159,14 +160,14 @@ public final class BHSToolbarScreen extends Screen {
         double mx = event.x();
         double my = event.y();
         int button = event.button();
-        if (button == 0 && maxScroll() > 0 && mx >= barX() && mx < barX() + BAR_W && my >= top && my < top + visible * ROW_H) {
+        if (button == InputConstants.MOUSE_BUTTON_LEFT && maxScroll() > 0 && mx >= barX() && mx < barX() + BAR_W && my >= top && my < top + visible * ROW_H) {
             dragging = true;
             scrollTo(my);
             return true;
         }
         for (int r = scroll; r < Math.min(shown.size(), scroll + visible); r++) {
             int y = rowY(r);
-            if (button == 0 && mx >= left + 14 && mx < left + 14 + HOTBAR_W && my >= y && my < y + 22) {
+            if (button == InputConstants.MOUSE_BUTTON_LEFT && mx >= left + 14 && mx < left + 14 + HOTBAR_W && my >= y && my < y + 22) {
                 minecraft.gui.setScreen(new BHSToolbarEditScreen(this, shown.get(r)));
                 return true;
             }

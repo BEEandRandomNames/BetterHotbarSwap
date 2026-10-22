@@ -1,5 +1,6 @@
 package com.betterhotbarswap.mixin;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import com.betterhotbarswap.BetterHotbarSwap;
 import com.betterhotbarswap.client.debug.BHSDebug;
 import com.betterhotbarswap.client.input.HotbarInputController;
@@ -118,7 +119,8 @@ public class CreativeInventoryScreenHotbarMixin {
         }
     }
     private static boolean isDigitKey(int keyCode) {
-        return (keyCode >= 49 && keyCode <= 57) || (keyCode >= 320 && keyCode <= 328);
+        return (keyCode >= InputConstants.KEY_1 && keyCode <= InputConstants.KEY_9)
+            || (keyCode >= InputConstants.KEY_NUMPAD1 && keyCode <= InputConstants.KEY_NUMPAD9) || keyCode == InputConstants.KEY_NUMPAD0;
     }
     // Eşya Sil (X) kutusu: envanter sekmesindeki SimpleInventory slot (liste sekmelerindeki
     // liste slotlarıyla karışmaması için güvenilmez-id şartı var).
@@ -130,7 +132,7 @@ public class CreativeInventoryScreenHotbarMixin {
     @Inject(method = "keyPressed", at = @At("HEAD"), cancellable = true)
     private void betterhotbarswap$keyPressed(KeyEvent event, CallbackInfoReturnable<Boolean> cir) {
         int keyCode = event.key();
-        int scanCode = event.scancode();
+        int scanCode = event.keycode();
         Minecraft client = Minecraft.getInstance();
         if (client.player == null || client.gameMode == null) return;
         // Oyuncunun gerçek bağları (V/R gibi remap'ler dahil, bug #13).
@@ -262,7 +264,9 @@ public class CreativeInventoryScreenHotbarMixin {
                 try {
                     playerInv.setSelectedSlot(hotbarIndex);
                     client.player.connection.send(new ServerboundSetCarriedItemPacket(hotbarIndex));
-                    dropped = client.player.drop(true);
+                    // 26.3+: seçili yığını atma MultiPlayerGameMode.dropItem (dönüş yok; atabilir mi önce sorulur).
+                    dropped = client.player.canDropItems();
+                    if (dropped) client.gameMode.dropItem(client.player, true);
                 } finally {
                     playerInv.setSelectedSlot(prevSel);
                     try { client.player.connection.send(new ServerboundSetCarriedItemPacket(prevSel)); } catch (Exception ignored) {}

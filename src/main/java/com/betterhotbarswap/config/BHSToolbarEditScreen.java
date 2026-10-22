@@ -1,5 +1,6 @@
 package com.betterhotbarswap.config;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import com.betterhotbarswap.client.toolbar.SurvivalToolbars;
 import com.betterhotbarswap.client.toolbar.ToolbarStorage;
 import java.util.List;
@@ -102,7 +103,7 @@ public final class BHSToolbarEditScreen extends Screen {
         double mx = event.x();
         double my = event.y();
         int button = event.button();
-        if (button != 0 && button != 1) return false;
+        if (button != InputConstants.MOUSE_BUTTON_LEFT && button != InputConstants.MOUSE_BUTTON_RIGHT) return false;
         int t = slotAt(mx, my);
         if (t == -1) {
             dropCursor();

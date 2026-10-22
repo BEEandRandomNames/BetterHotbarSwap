@@ -82,9 +82,10 @@ sprite(stone, 24, 9);
 for (let y = 9; y <= 24; y++) for (let x = 24; x <= 39; x++) blend(x, y, '#FFFFFF', 0.30);
 
 
-// Yeşil ok: çıktı -> 2. slot.
-art(28, 30, ['..####..', '..####..', '..####..', '..####..', '########', '.######.', '..####..', '...##...'], { '#': '#3ECF3E' });
-outline(26, 29, 37, 39, '#3ECF3E', '#1E6B1E', '#C6C6C6');
+// Yeşil ok: çıktı -> 2. slot. Gövde çıktı slotunun içinden, kazmanın hemen altından
+// başlar (kullanıcı isteği 2026-10-22: "çizgisini çıktıdaki kazmaya doğru uzat").
+art(28, 26, ['..####..', '..####..', '..####..', '..####..', '..####..', '..####..', '..####..', '..####..', '########', '.######.', '..####..', '...##...'], { '#': '#3ECF3E' });
+for (const bg of ['#C6C6C6', '#8B8B8B', '#FFFFFF']) outline(26, 25, 37, 39, '#3ECF3E', '#1E6B1E', bg);
 
 // Hotbar: 1 = kaymış tahta kazma, 2 = seçili + taş kazma, 3 = boş (referans görsel).
 slot(4, 41, 21, 58); slot(23, 41, 40, 58); slot(42, 41, 59, 58);

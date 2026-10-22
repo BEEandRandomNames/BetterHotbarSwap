@@ -821,6 +821,18 @@ public class VanillaClickExecutor {
                         client.gameMode.handleContainerInput(handler.containerId, focusedSlotId, hotbarIndex, ContainerInput.SWAP, client.player);
                         return true;
                     }
+                    // F2 (dolu-dolu, kullanıcı kuralı): envanterde hiç yer yok ve kaynak eski eşyayı
+                    // geri alamıyor (çıktı slotu; vanilla takası sunucuda reddedilir) -> eski yığın
+                    // vanilla THROW ile yere atılır (Ctrl+Q eşdeğeri, imleçsiz), sonra çıktı hedefe.
+                    // Sandık gibi geri alabilen kaynakta vanilla takas yeterli (atma yok).
+                    ItemStack oldHb = playerInv.getItem(hotbarIndex);
+                    if (handler.getCarried().isEmpty() && !target.mayPlace(oldHb)) {
+                        BHSDebug.log("PRIORITY sync=" + handler.containerId + " eski hb" + (hotbarIndex + 1) + " x" + oldHb.getCount()
+                            + " -> yere (dolu-dolu), sonra slot " + focusedSlotId + " -> hb" + (hotbarIndex + 1));
+                        client.gameMode.handleContainerInput(handler.containerId, hotbarRealSlotId, 1, ContainerInput.THROW, client.player);
+                        client.gameMode.handleContainerInput(handler.containerId, focusedSlotId, hotbarIndex, ContainerInput.SWAP, client.player);
+                        return true;
+                    }
                 }
             }
             BHSDebug.log("SEND SWAP sync=" + handler.containerId + " slot=" + focusedSlotId + " -> hotbar" + (hotbarIndex + 1));

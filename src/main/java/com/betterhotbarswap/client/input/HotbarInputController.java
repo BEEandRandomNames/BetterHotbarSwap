@@ -297,9 +297,6 @@ public final class HotbarInputController {
                         + " key->hotbar" + (hotbarIndex + 1) + " result=tidy -> " + TidyCollect.slotName(TidyCollect.lastDest()));
                     return true;
                 }
-                if (takeResult == TidyCollect.TAKE_FAILED) {
-                    TidyCollect.tellFull(Minecraft.getInstance());
-                }
                 markPressed(keyCode);
                 return true;
             }

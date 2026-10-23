@@ -15,7 +15,7 @@ import com.betterhotbarswap.client.debug.BHSDebug;
 public final class BetterHotbarSwapClient implements ClientModInitializer {
     // Açılış damgası: HANGİ build'in çalıştığını latest.log'dan kanıtlar
     // (bayat-build testlerini bitirir). Her dağıtımdan önce BUMP edilir.
-    private static final String BUILD_ID = "2026-10-23-1.21.9b";
+    private static final String BUILD_ID = "2026-10-23-1.21.10a";
     // 1.21.9+: tuş kategorisi metin değil kayıtlı kimlik (dil anahtarı key.category.betterhotbarswap.main).
     public static final KeyBinding.Category CATEGORY = KeyBinding.Category.create(net.minecraft.util.Identifier.of("betterhotbarswap", "main"));
     private static KeyBinding settingsKey;

@@ -36,5 +36,7 @@
   "modmenu.descriptionTranslation.betterhotbarswap": "Macht Minecrafts Hotkey-Zuweisung funktionaler und intelligenter. Außerdem ermöglicht es eine ganz neue Art, Hotkeys zu nutzen.",
   "betterhotbarswap.update.title": "%s-Update",
   "betterhotbarswap.update.message": "%1$s %2$s ist erschienen. Möchtest du die Mod aktualisieren?",
-  "betterhotbarswap.update.later": "Nicht jetzt"
+  "betterhotbarswap.update.later": "Nicht jetzt",
+  "betterhotbarswap.toolbar.foreign": "In Minecraft %s gespeichert, hier nicht verfügbar",
+  "betterhotbarswap.toolbar.foreign_any": "In diesem Spiel nicht verfügbar"
 }

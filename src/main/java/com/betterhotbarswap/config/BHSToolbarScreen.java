@@ -2,6 +2,7 @@ package com.betterhotbarswap.config;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import com.betterhotbarswap.client.toolbar.SurvivalToolbars;
+import com.betterhotbarswap.client.toolbar.ToolbarIcons;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.KeyMapping;
@@ -113,8 +114,10 @@ public final class BHSToolbarScreen extends Screen {
                 if (st.isEmpty()) continue;
                 int ix = hx + 3 + s * 20;
                 int iy = y + 3;
-                context.item(st, ix, iy);
-                context.itemDecorations(font, st, ix, iy);
+                if (!ToolbarIcons.draw(context, font, st, ix, iy)) {
+                    context.item(st, ix, iy);
+                    context.itemDecorations(font, st, ix, iy);
+                }
                 if (inv != null && !has(inv, st)) {
                     context.fill(ix, iy, ix + 16, iy + 16, 0x66FF0000);
                 }

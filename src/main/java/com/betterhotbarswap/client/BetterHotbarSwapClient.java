@@ -15,7 +15,7 @@ import com.betterhotbarswap.client.debug.BHSDebug;
 public final class BetterHotbarSwapClient implements ClientModInitializer {
     // Açılış damgası: HANGİ build'in çalıştığını latest.log'dan kanıtlar
     // (bayat-build testlerini bitirir). Her dağıtımdan önce BUMP edilir.
-    private static final String BUILD_ID = "2026-10-23-26.3b";
+    private static final String BUILD_ID = "2026-10-23-26.3h";
     // 26.1+: tuş kategorisi kayıtlı nesne; adı "key.category.betterhotbarswap.main" (dil dosyaları).
     public static final KeyMapping.Category CATEGORY = KeyMapping.Category.register(Identifier.fromNamespaceAndPath("betterhotbarswap", "main"));
     private static KeyMapping settingsKey;

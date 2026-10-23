@@ -36,5 +36,7 @@
   "modmenu.descriptionTranslation.betterhotbarswap": "Minecraft의 단축키 할당 시스템을 더 실용적이고 똑똑하게 만듭니다. 또한 단축키를 사용하는 완전히 새로운 방법을 제공합니다.",
   "betterhotbarswap.update.title": "%s 업데이트",
   "betterhotbarswap.update.message": "%1$s %2$s 버전이 출시되었습니다. 모드를 업데이트하시겠습니까?",
-  "betterhotbarswap.update.later": "나중에"
+  "betterhotbarswap.update.later": "나중에",
+  "betterhotbarswap.toolbar.foreign": "Minecraft %s에서 저장됨, 여기서는 사용 불가",
+  "betterhotbarswap.toolbar.foreign_any": "이 게임에서는 사용 불가"
 }

@@ -1,6 +1,7 @@
 package com.betterhotbarswap.config;
 
 import com.betterhotbarswap.client.toolbar.SurvivalToolbars;
+import com.betterhotbarswap.client.toolbar.ToolbarIcons;
 import com.betterhotbarswap.client.toolbar.ToolbarStorage;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
@@ -134,19 +135,26 @@ public final class BHSToolbarEditScreen extends Screen {
                 context.drawGuiTexture(net.minecraft.client.render.RenderLayer::getGuiTextured,
                     net.minecraft.screen.PlayerScreenHandler.EMPTY_OFF_HAND_SLOT_TEXTURE, x + 1, y + 1, 16, 16);
             }
-            context.drawItem(st, x + 1, y + 1);
-            context.drawStackOverlay(textRenderer, st, x + 1, y + 1);
+            if (!ToolbarIcons.draw(context, textRenderer, st, x + 1, y + 1)) {
+                context.drawItem(st, x + 1, y + 1);
+                context.drawStackOverlay(textRenderer, st, x + 1, y + 1);
+            }
             if (inv != null && !st.isEmpty() && !has(inv, st)) context.fill(x + 1, y + 1, x + 17, y + 17, 300, 0x66FF0000);
             if (t == hovered) context.fill(x + 1, y + 1, x + 17, y + 17, 300, 0x80FFFFFF);
         }
         if (!cursor.isEmpty()) {
             context.getMatrices().push();
             context.getMatrices().translate(0, 0, 400);
-            context.drawItem(cursor, mouseX - 8, mouseY - 8);
-            context.drawStackOverlay(textRenderer, cursor, mouseX - 8, mouseY - 8);
+            if (!ToolbarIcons.draw(context, textRenderer, cursor, mouseX - 8, mouseY - 8)) {
+                context.drawItem(cursor, mouseX - 8, mouseY - 8);
+                context.drawStackOverlay(textRenderer, cursor, mouseX - 8, mouseY - 8);
+            }
             context.getMatrices().pop();
         } else if (hovered >= 0 && !slots[hovered].isEmpty()) {
-            context.drawItemTooltip(textRenderer, slots[hovered], mouseX, mouseY);
+            // Yabancı eşya: kayıttaki adı + hangi sürümde kaydedildiği.
+            List<Text> foreign = ToolbarIcons.tooltip(slots[hovered]);
+            if (foreign != null) context.drawTooltip(textRenderer, foreign, mouseX, mouseY);
+            else context.drawItemTooltip(textRenderer, slots[hovered], mouseX, mouseY);
         }
     }
 

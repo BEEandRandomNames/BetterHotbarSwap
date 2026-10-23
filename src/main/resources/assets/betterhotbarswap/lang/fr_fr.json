@@ -36,5 +36,7 @@
   "modmenu.descriptionTranslation.betterhotbarswap": "Rend le système d'attribution des raccourcis de Minecraft plus pratique et plus intelligent. Il permet aussi une toute nouvelle façon d'utiliser les raccourcis.",
   "betterhotbarswap.update.title": "Mise à jour de %s",
   "betterhotbarswap.update.message": "%1$s %2$s est disponible. Voulez-vous mettre à jour le mod ?",
-  "betterhotbarswap.update.later": "Pas maintenant"
+  "betterhotbarswap.update.later": "Pas maintenant",
+  "betterhotbarswap.toolbar.foreign": "Enregistré dans Minecraft %s, indisponible ici",
+  "betterhotbarswap.toolbar.foreign_any": "Indisponible dans ce jeu"
 }

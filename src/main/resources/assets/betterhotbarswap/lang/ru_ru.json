@@ -31,8 +31,6 @@
   "betterhotbarswap.toolbar.hint": "В мире: %s+клавиша — сохранить, %s+клавиша — загрузить",
   "betterhotbarswap.toolbar.empty": "Панель инструментов %s пуста",
   "betterhotbarswap.toolbar.loaded": "Панель инструментов %s загружена (%s/%s предметов)",
-  "betterhotbarswap.msg.no_room": "Нет места — освободите место в инвентаре.",
-  "betterhotbarswap.msg.stalled": "Сбор застрял — освободите курсор и откройте окно заново.",
   "betterhotbarswap.toolbar.saved": "Сохранено",
   "modmenu.summaryTranslation.betterhotbarswap": "Делает систему назначения горячих клавиш Minecraft удобнее и умнее.",
   "modmenu.descriptionTranslation.betterhotbarswap": "Делает систему назначения горячих клавиш Minecraft удобнее и умнее. Кроме того, он даёт совершенно новый способ использования горячих клавиш.",

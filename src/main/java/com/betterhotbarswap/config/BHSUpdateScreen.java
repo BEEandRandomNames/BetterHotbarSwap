@@ -1,13 +1,15 @@
 package com.betterhotbarswap.config;
 
-import net.minecraft.client.font.MultilineText;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.screen.ScreenTexts;
+import net.minecraft.text.OrderedText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Util;
+
+import java.util.List;
 
 // Güncelleme sorusu (UpdateChecker). Evet = indirme sayfası, Şimdi değil = sonraki
 // açılışta yine sorar, Hayır = bir daha hiç sormaz (config). ESC = Şimdi değil.
@@ -19,7 +21,8 @@ public final class BHSUpdateScreen extends Screen {
     private final Screen parent;
     private final String url;
     private final Text message;
-    private MultilineText lines = MultilineText.EMPTY;
+    // 1.21.11+: MultilineText.draw DrawnTextConsumer ister; satırlar elle bölünüp ortalanır (26.1 ile aynı).
+    private List<OrderedText> lines = List.of();
 
     public BHSUpdateScreen(Screen parent, String version, String url) {
         super(Text.translatable("betterhotbarswap.update.title", NAME));
@@ -30,8 +33,8 @@ public final class BHSUpdateScreen extends Screen {
 
     @Override
     protected void init() {
-        lines = MultilineText.create(textRenderer, message, width - 50);
-        int y = Math.min(90 + lines.getLineCount() * 9 + 20, height - 24);
+        lines = textRenderer.wrapLines(message, width - 50);
+        int y = Math.min(90 + lines.size() * 9 + 20, height - 24);
         int x = width / 2 - (BTN_W * 3 + 8) / 2;
         addDrawableChild(ButtonWidget.builder(ScreenTexts.YES.copy().formatted(Formatting.GREEN), b -> {
             Util.getOperatingSystem().open(url);
@@ -50,7 +53,7 @@ public final class BHSUpdateScreen extends Screen {
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         super.render(context, mouseX, mouseY, delta); // 1.20.2+: Screen.render arka planı çizer; içerik üstüne
         context.drawCenteredTextWithShadow(textRenderer, title, width / 2, 70, 0xFFFFFFFF);
-        lines.draw(context, MultilineText.Alignment.CENTER, width / 2, 90, 9, true, 0xFFFFFFFF);
+        for (int i = 0; i < lines.size(); i++) context.drawCenteredTextWithShadow(textRenderer, lines.get(i), width / 2, 90 + i * 9, 0xFFFFFFFF);
     }
 
     @Override

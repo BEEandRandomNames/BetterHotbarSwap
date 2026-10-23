@@ -827,6 +827,20 @@ public class VanillaClickExecutor {
                     // Sandık gibi geri alabilen kaynakta vanilla takas yeterli (atma yok).
                     ItemStack oldHb = playerInv.getStack(hotbarIndex);
                     if (handler.getCursorStack().isEmpty() && !target.canInsert(oldHb)) {
+                        // Toplu üretim (Shift, kullanıcı 2026-10-23): hedefteki AYNI ürün yığını asla
+                        // atılmaz; 64'e tamamlanır, sığmayan üretim yere (imleç pencere dışına / çıktıya THROW).
+                        if (forcePriority && isSameStackable(focusedStack, oldHb)) {
+                            if (oldHb.getCount() < oldHb.getMaxCount()) {
+                                BHSDebug.log("BULK sync=" + handler.syncId + " hb" + (hotbarIndex + 1) + " -> x" + oldHb.getMaxCount() + ", kalan yere");
+                                client.interactionManager.clickSlot(handler.syncId, focusedSlotId, 0, SlotActionType.PICKUP, client.player);
+                                client.interactionManager.clickSlot(handler.syncId, hotbarRealSlotId, 0, SlotActionType.PICKUP, client.player);
+                                client.interactionManager.clickSlot(handler.syncId, -999, 0, SlotActionType.PICKUP, client.player);
+                            } else {
+                                BHSDebug.log("BULK sync=" + handler.syncId + " hb" + (hotbarIndex + 1) + " dolu, cikti x" + focusedStack.getCount() + " yere");
+                                client.interactionManager.clickSlot(handler.syncId, focusedSlotId, 1, SlotActionType.THROW, client.player);
+                            }
+                            return true;
+                        }
                         BHSDebug.log("PRIORITY sync=" + handler.syncId + " eski hb" + (hotbarIndex + 1) + " x" + oldHb.getCount()
                             + " -> yere (dolu-dolu), sonra slot " + focusedSlotId + " -> hb" + (hotbarIndex + 1));
                         client.interactionManager.clickSlot(handler.syncId, hotbarRealSlotId, 1, SlotActionType.THROW, client.player);

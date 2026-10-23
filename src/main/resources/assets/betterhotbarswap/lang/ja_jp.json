@@ -36,5 +36,7 @@
   "modmenu.descriptionTranslation.betterhotbarswap": "Minecraft のショートカット割り当てをもっと便利で賢くします。さらに、ショートカットのまったく新しい使い方を可能にします。",
   "betterhotbarswap.update.title": "%s のアップデート",
   "betterhotbarswap.update.message": "%1$s %2$s が公開されました。MODを更新しますか？",
-  "betterhotbarswap.update.later": "今はしない"
+  "betterhotbarswap.update.later": "今はしない",
+  "betterhotbarswap.toolbar.foreign": "Minecraft %s で保存、ここでは使用不可",
+  "betterhotbarswap.toolbar.foreign_any": "このゲームでは使用不可"
 }

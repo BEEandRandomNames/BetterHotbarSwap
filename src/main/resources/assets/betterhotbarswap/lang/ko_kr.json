@@ -31,8 +31,6 @@
   "betterhotbarswap.toolbar.hint": "월드에서: %s+단축키 저장, %s+단축키 불러오기",
   "betterhotbarswap.toolbar.empty": "도구 모음 %s이(가) 비어 있습니다",
   "betterhotbarswap.toolbar.loaded": "도구 모음 %s 불러옴 (%s/%s개)",
-  "betterhotbarswap.msg.no_room": "공간이 없습니다 — 인벤토리를 비워 주세요.",
-  "betterhotbarswap.msg.stalled": "가져오기가 멈췄습니다 — 커서를 비우고 화면을 다시 여세요.",
   "betterhotbarswap.toolbar.saved": "저장됨",
   "modmenu.summaryTranslation.betterhotbarswap": "Minecraft의 단축키 할당 시스템을 더 실용적이고 똑똑하게 만듭니다.",
   "modmenu.descriptionTranslation.betterhotbarswap": "Minecraft의 단축키 할당 시스템을 더 실용적이고 똑똑하게 만듭니다. 또한 단축키를 사용하는 완전히 새로운 방법을 제공합니다.",

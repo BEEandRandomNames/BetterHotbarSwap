@@ -30,7 +30,6 @@ public final class ShiftBulkQuickMove {
     private static boolean settled;
     private static String lastProgressKey = "";
     private static int stuckTicks;
-    private static long lastStallMsgMs;
     // İmleç ancak birkaç tick kalıcıysa gerçektir (sunucu düzeltmesi 1-2 tick'te gelir);
     // hayalet imlece göre "kurtarma" PICKUP'ı sunucuda dolu slotu imlece çekebilir (#46).
     private static int carriedTicks;
@@ -135,10 +134,9 @@ public final class ShiftBulkQuickMove {
             return;
         }
         // Kaynak-governor: alım yapıldıysa girdi AZALMIŞ olmalı. 15 tick'te
-        // azalma yoksa kaynak tükenmiyor (sonsuz/hayalet) -> DUR + mesaj.
+        // azalma yoksa kaynak tükenmiyor (sonsuz/hayalet) -> DUR.
         if (!govInputIds.isEmpty() && (govPressTakes > 0 || actions > 0) && ticks > 15) {
             if (govTotal(client) >= govInputTotal) {
-                notifyStall(client);
                 finish("kaynak-tukenmedi");
                 return;
             }
@@ -175,7 +173,6 @@ public final class ShiftBulkQuickMove {
         if (progressKey != null) {
             if (progressKey.equals(lastProgressKey)) {
                 if (++stuckTicks >= 6 && actions > 0) {
-                    notifyStall(client);
                     finish("ilerleme-yok");
                     return;
                 }
@@ -403,21 +400,6 @@ public final class ShiftBulkQuickMove {
     private static void finish(String why) {
         BHSDebug.log("SHIFT_BULK-QM stop (" + why + ") actions=" + actions);
         cancel();
-    }
-
-    // Takılma bildirimi: guard sessiz kalmasın. 10 sn'de bir (mash-spam yok).
-    private static void notifyStall(MinecraftClient client) {
-        try {
-            long now = System.currentTimeMillis();
-            if (now - lastStallMsgMs < 10000) return;
-            lastStallMsgMs = now;
-            if (client.player == null) return;
-            client.player.sendMessage(
-                net.minecraft.text.Text.translatable("betterhotbarswap.msg.stalled")
-                    .formatted(net.minecraft.util.Formatting.RED),
-                false);
-        } catch (Exception ignored) {
-        }
     }
 
     private static String outputKey() {

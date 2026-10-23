@@ -98,7 +98,7 @@ public final class ToolbarStorage {
                 NbtList list = new NbtList();
                 for (int j = 0; j < SIZE; j++) {
                     ItemStack s = bars[i].get(j);
-                    list.add(s.isEmpty() && undecoded[i][j] != null ? undecoded[i][j] : s.encodeAllowEmpty(lookup));
+                    list.add(s.isEmpty() && undecoded[i][j] != null ? undecoded[i][j] : s.toNbtAllowEmpty(lookup));
                 }
                 root.put(String.valueOf(i), list);
             }

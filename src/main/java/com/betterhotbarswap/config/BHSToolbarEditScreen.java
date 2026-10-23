@@ -130,12 +130,12 @@ public final class BHSToolbarEditScreen extends Screen {
             ItemStack st = slots[t];
             // Boş sol el: vanilla'nın kalkan silüeti (kaynak paketine de uyar).
             if (t == ToolbarStorage.OFFHAND && st.isEmpty()) {
-                context.drawSprite(x + 1, y + 1, 0, 16, 16, client.getSpriteAtlas(
+                context.drawSpriteStretched(net.minecraft.client.render.RenderLayer::getGuiTextured, client.getSpriteAtlas(
                     net.minecraft.screen.PlayerScreenHandler.BLOCK_ATLAS_TEXTURE)
-                    .apply(net.minecraft.screen.PlayerScreenHandler.EMPTY_OFFHAND_ARMOR_SLOT));
+                    .apply(net.minecraft.screen.PlayerScreenHandler.EMPTY_OFFHAND_ARMOR_SLOT), x + 1, y + 1, 16, 16);
             }
             context.drawItem(st, x + 1, y + 1);
-            context.drawItemInSlot(textRenderer, st, x + 1, y + 1);
+            context.drawStackOverlay(textRenderer, st, x + 1, y + 1);
             if (inv != null && !st.isEmpty() && !has(inv, st)) context.fill(x + 1, y + 1, x + 17, y + 17, 300, 0x66FF0000);
             if (t == hovered) context.fill(x + 1, y + 1, x + 17, y + 17, 300, 0x80FFFFFF);
         }
@@ -143,7 +143,7 @@ public final class BHSToolbarEditScreen extends Screen {
             context.getMatrices().push();
             context.getMatrices().translate(0, 0, 400);
             context.drawItem(cursor, mouseX - 8, mouseY - 8);
-            context.drawItemInSlot(textRenderer, cursor, mouseX - 8, mouseY - 8);
+            context.drawStackOverlay(textRenderer, cursor, mouseX - 8, mouseY - 8);
             context.getMatrices().pop();
         } else if (hovered >= 0 && !slots[hovered].isEmpty()) {
             context.drawItemTooltip(textRenderer, slots[hovered], mouseX, mouseY);

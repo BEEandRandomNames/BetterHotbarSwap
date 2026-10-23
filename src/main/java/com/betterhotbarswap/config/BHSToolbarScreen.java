@@ -99,7 +99,7 @@ public final class BHSToolbarScreen extends Screen {
             // Oyunun KENDİ hotbar görseli (oyundakiyle birebir, kaynak paketine uyar).
             // Adı/API'si sürümle değişir: 1.20.1 widgets.png, 1.20.2+ "hud/hotbar" sprite'ı
             // (javap: InGameHud aynısını çiziyor). Port prosedüründe her sürüm kontrol edilir.
-            context.drawGuiTexture(HOTBAR, hx, y, HOTBAR_W, 22);
+            context.drawGuiTexture(net.minecraft.client.render.RenderLayer::getGuiTextured, HOTBAR, hx, y, HOTBAR_W, 22);
             boolean over = mouseX >= hx && mouseX < hx + HOTBAR_W && mouseY >= y && mouseY < y + 22;
             java.util.List<ItemStack> entry = SurvivalToolbars.storage(client).get(idx);
             for (int s = 0; s < 9; s++) {
@@ -108,7 +108,7 @@ public final class BHSToolbarScreen extends Screen {
                 int ix = hx + 3 + s * 20;
                 int iy = y + 3;
                 context.drawItem(st, ix, iy);
-                context.drawItemInSlot(textRenderer, st, ix, iy);
+                context.drawStackOverlay(textRenderer, st, ix, iy);
                 if (inv != null && !has(inv, st)) {
                     context.fill(ix, iy, ix + 16, iy + 16, 300, 0x66FF0000);
                 }
@@ -122,8 +122,8 @@ public final class BHSToolbarScreen extends Screen {
         if (maxScroll() > 0) {
             int h = visible * ROW_H;
             int th = Math.max(16, h * visible / shown.size());
-            context.drawGuiTexture(SCROLLER_BG, barX(), top, BAR_W, h);
-            context.drawGuiTexture(SCROLLER, barX(), top + (h - th) * scroll / maxScroll(), BAR_W, th);
+            context.drawGuiTexture(net.minecraft.client.render.RenderLayer::getGuiTextured, SCROLLER_BG, barX(), top, BAR_W, h);
+            context.drawGuiTexture(net.minecraft.client.render.RenderLayer::getGuiTextured, SCROLLER, barX(), top + (h - th) * scroll / maxScroll(), BAR_W, th);
         }
         Text hint = Text.translatable("betterhotbarswap.toolbar.hint",
             com.betterhotbarswap.client.BetterHotbarSwapClient.getToolbarSaveKey().getBoundKeyLocalizedText(),

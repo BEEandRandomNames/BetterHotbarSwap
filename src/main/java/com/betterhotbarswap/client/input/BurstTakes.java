@@ -3,10 +3,8 @@ package com.betterhotbarswap.client.input;
 import com.betterhotbarswap.client.debug.BHSDebug;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.inventory.CraftingInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.recipe.CraftingRecipe;
-import net.minecraft.recipe.RecipeType;
 import net.minecraft.screen.CraftingScreenHandler;
 import net.minecraft.screen.PlayerScreenHandler;
 import net.minecraft.screen.ScreenHandler;
@@ -17,7 +15,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 // Aynı-tick burst motoru (hız tavanı: 0.06-0.1sn algısı).
 //
@@ -103,17 +100,19 @@ public final class BurstTakes {
                     grid[i] = s.isEmpty() ? 0 : s.getCount();
                     if (grid[i] > 0) used[i] = true;
                 }
-                // Tarif eşleşmesi + artık-ürün kontrolü (kova/su şişesi vb. -> fallback).
-                CraftingInventory craftCopy = new CraftingInventory(handler, gridW, gridW == 3 ? 3 : 2);
+                // 1.21.2+: istemcide tarif listesi yok (tarifler sunucuda). Gerekmiyor: çıktı dolu =
+                // tarif şu an eşleşiyor; her üretim dolu her slottan 1 tüketir, slotlar boşalmadıkça
+                // aynı tarif (N = min). Artık ürün: vanilla istemcisinin KENDİ tahmini (CraftingResultSlot
+                // istemcide collectRecipeRemainders kullanır, javap). Kitap/sancak kopyalama girdiyi
+                // ızgarada bırakır ve bu tahmin onu bilmez -> çıktı girdilerden biriyle aynıysa drain.
+                List<ItemStack> gridItems = new ArrayList<>();
                 for (int i = 0; i < grid.length; i++) {
-                    craftCopy.setStack(i, handler.getSlot(gridFrom + i).getStack().copy());
+                    ItemStack s = handler.getSlot(gridFrom + i).getStack();
+                    if (s.getItem() == anchor.getItem()) return null;
+                    gridItems.add(s.copy());
                 }
-                // 1.21+: tarif girdisi envanter değil, ondan üretilen CraftingRecipeInput.
-                net.minecraft.recipe.input.CraftingRecipeInput input = craftCopy.createRecipeInput();
-                Optional<net.minecraft.recipe.RecipeEntry<CraftingRecipe>> match = client.world.getRecipeManager()
-                    .getFirstMatch(RecipeType.CRAFTING, input, client.world);
-                if (match.isEmpty()) return null;
-                for (ItemStack rem : match.get().value().getRemainder(input)) {
+                for (ItemStack rem : CraftingRecipe.collectRecipeRemainders(
+                        net.minecraft.recipe.input.CraftingRecipeInput.create(gridW, grid.length / gridW, gridItems))) {
                     if (!rem.isEmpty()) return null;
                 }
             } else {

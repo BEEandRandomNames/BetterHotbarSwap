@@ -149,8 +149,11 @@ public final class BHSToolbarScreen extends Screen {
 
     // Çubuğun üzerine tıklayınca düzenleyici açılır.
     @Override
-    public boolean mouseClicked(double mx, double my, int button) {
-        if (super.mouseClicked(mx, my, button)) return true;
+    public boolean mouseClicked(net.minecraft.client.gui.Click click, boolean doubleClick) {
+        if (super.mouseClicked(click, doubleClick)) return true;
+        double mx = click.x();
+        double my = click.y();
+        int button = click.button();
         if (button == 0 && maxScroll() > 0 && mx >= barX() && mx < barX() + BAR_W && my >= top && my < top + visible * ROW_H) {
             dragging = true;
             scrollTo(my);
@@ -198,27 +201,27 @@ public final class BHSToolbarScreen extends Screen {
     }
 
     @Override
-    public boolean mouseDragged(double mx, double my, int button, double dx, double dy) {
-        if (!dragging) return super.mouseDragged(mx, my, button, dx, dy);
-        scrollTo(my);
+    public boolean mouseDragged(net.minecraft.client.gui.Click click, double dx, double dy) {
+        if (!dragging) return super.mouseDragged(click, dx, dy);
+        scrollTo(click.y());
         return true;
     }
 
     @Override
-    public boolean mouseReleased(double mx, double my, int button) {
+    public boolean mouseReleased(net.minecraft.client.gui.Click click) {
         dragging = false;
-        return super.mouseReleased(mx, my, button);
+        return super.mouseReleased(click);
     }
 
     // Açan tuşa tekrar basınca kapanır (vanilla envanter tuşu gibi).
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+    public boolean keyPressed(net.minecraft.client.input.KeyInput input) {
         var key = com.betterhotbarswap.client.BetterHotbarSwapClient.getToolbarsKey();
-        if (key != null && key.matchesKey(keyCode, scanCode)) {
+        if (key != null && key.matchesKey(input)) {
             close();
             return true;
         }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        return super.keyPressed(input);
     }
 
     @Override

@@ -31,7 +31,7 @@ public final class BHSUpdateScreen extends Screen {
     @Override
     protected void init() {
         lines = MultilineText.create(textRenderer, message, width - 50);
-        int y = Math.min(90 + lines.count() * 9 + 20, height - 24);
+        int y = Math.min(90 + lines.getLineCount() * 9 + 20, height - 24);
         int x = width / 2 - (BTN_W * 3 + 8) / 2;
         addDrawableChild(ButtonWidget.builder(ScreenTexts.YES.copy().formatted(Formatting.GREEN), b -> {
             Util.getOperatingSystem().open(url);
@@ -50,7 +50,7 @@ public final class BHSUpdateScreen extends Screen {
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         super.render(context, mouseX, mouseY, delta); // 1.20.2+: Screen.render arka planı çizer; içerik üstüne
         context.drawCenteredTextWithShadow(textRenderer, title, width / 2, 70, 0xFFFFFFFF);
-        lines.drawCenterWithShadow(context, width / 2, 90);
+        lines.draw(context, MultilineText.Alignment.CENTER, width / 2, 90, 9, true, 0xFFFFFFFF);
     }
 
     @Override

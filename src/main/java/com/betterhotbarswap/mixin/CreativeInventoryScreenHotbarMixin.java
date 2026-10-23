@@ -128,7 +128,9 @@ public class CreativeInventoryScreenHotbarMixin {
             && !VanillaClickExecutor.idsTrustworthy(handler);
     }
     @Inject(method = "keyPressed", at = @At("HEAD"), cancellable = true)
-    private void betterhotbarswap$keyPressed(int keyCode, int scanCode, int modifiers, CallbackInfoReturnable<Boolean> cir) {
+    private void betterhotbarswap$keyPressed(net.minecraft.client.input.KeyInput input, CallbackInfoReturnable<Boolean> cir) {
+        int keyCode = input.key();
+        int scanCode = input.scancode();
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.player == null || client.interactionManager == null) return;
         // Oyuncunun gerçek bağları (V/R gibi remap'ler dahil, bug #13).
@@ -325,7 +327,8 @@ public class CreativeInventoryScreenHotbarMixin {
     }
 
     @Inject(method = "charTyped", at = @At("HEAD"), cancellable = true)
-    private void betterhotbarswap$charTyped(char chr, int modifiers, CallbackInfoReturnable<Boolean> cir) {        // GLFW tuş olayından bağımsız karakter olayı da gelir; keyPressed'i iptal etmek
+    private void betterhotbarswap$charTyped(net.minecraft.client.input.CharInput input, CallbackInfoReturnable<Boolean> cir) {
+        char chr = (char) input.codepoint();        // GLFW tuş olayından bağımsız karakter olayı da gelir; keyPressed'i iptal etmek
         // aramaya sızmasını engellemez. Item slotu üstündeyken + (rakam VEYA az önce
         // hotkey takası olduysa) gelen karakter = hotkey'dir, yutulur.
         MinecraftClient client = MinecraftClient.getInstance();

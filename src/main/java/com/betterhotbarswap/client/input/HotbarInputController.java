@@ -126,20 +126,20 @@ public final class HotbarInputController {
         // Sol-el (F) en once: vanilla paritesi (swapHands her seyi yener).
         try {
             if (client != null && client.options != null && client.options.swapHandsKey != null
-                && client.options.swapHandsKey.matchesKey(keyCode, scanCode)) return 10;
+                && client.options.swapHandsKey.matchesKey(new net.minecraft.client.input.KeyInput(keyCode, scanCode, 0))) return 10;
         } catch (Exception ignored) {
         }
         // Özel 10. yuva (main-only) önce: açık kullanıcı seçimi her zaman kazanır.
         try {
             net.minecraft.client.option.KeyBinding hotbar10 = com.betterhotbarswap.client.BetterHotbarSwapClient.getHotbar10Key();
-            if (hotbar10 != null && hotbar10.matchesKey(keyCode, scanCode)) return 9;
+            if (hotbar10 != null && hotbar10.matchesKey(new net.minecraft.client.input.KeyInput(keyCode, scanCode, 0))) return 9;
         } catch (Exception ignored) {
         }
         if (client != null && client.options != null && client.options.hotbarKeys != null) {
             KeyBinding[] keys = client.options.hotbarKeys;
             for (int i = 0; i < keys.length && i < 9; i++) {
                 try {
-                    if (keys[i] != null && keys[i].matchesKey(keyCode, scanCode)) return i;
+                    if (keys[i] != null && keys[i].matchesKey(new net.minecraft.client.input.KeyInput(keyCode, scanCode, 0))) return i;
                 } catch (Exception ignored) {
                 }
             }
@@ -183,7 +183,7 @@ public final class HotbarInputController {
         // ilk iş Screen.keyPressed). Yazı yazılıyorsa takas YOK.
         try {
             net.minecraft.client.gui.Element focused = screen.getFocused();
-            if (focused != null && focused.keyPressed(keyCode, scanCode, modifiers)) return true;
+            if (focused != null && focused.keyPressed(new net.minecraft.client.input.KeyInput(keyCode, scanCode, modifiers))) return true;
         } catch (Exception ignored) {
         }
         lastHotkey = keyCode;
@@ -208,12 +208,12 @@ public final class HotbarInputController {
     private static int mouseHotbarIndex(MinecraftClient client, int button) {
         if (client == null || client.options == null) return -1;
         try {
-            if (client.options.swapHandsKey.matchesMouse(button)) return 10;
+            if (client.options.swapHandsKey.matchesMouse(new net.minecraft.client.gui.Click(0, 0, new net.minecraft.client.input.MouseInput(button, 0)))) return 10;
             KeyBinding hotbar10 = com.betterhotbarswap.client.BetterHotbarSwapClient.getHotbar10Key();
-            if (hotbar10 != null && hotbar10.matchesMouse(button)) return 9;
+            if (hotbar10 != null && hotbar10.matchesMouse(new net.minecraft.client.gui.Click(0, 0, new net.minecraft.client.input.MouseInput(button, 0)))) return 9;
             KeyBinding[] keys = client.options.hotbarKeys;
             for (int i = 0; i < keys.length && i < 9; i++) {
-                if (keys[i] != null && keys[i].matchesMouse(button)) return i;
+                if (keys[i] != null && keys[i].matchesMouse(new net.minecraft.client.gui.Click(0, 0, new net.minecraft.client.input.MouseInput(button, 0)))) return i;
             }
         } catch (Exception ignored) {
         }

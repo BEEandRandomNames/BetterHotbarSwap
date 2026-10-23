@@ -96,8 +96,11 @@ public final class BHSToolbarEditScreen extends Screen {
     }
 
     @Override
-    public boolean mouseClicked(double mx, double my, int button) {
-        if (super.mouseClicked(mx, my, button)) return true;
+    public boolean mouseClicked(net.minecraft.client.gui.Click click, boolean doubleClick) {
+        if (super.mouseClicked(click, doubleClick)) return true;
+        double mx = click.x();
+        double my = click.y();
+        int button = click.button();
         if (button != 0 && button != 1) return false;
         int t = slotAt(mx, my);
         if (t == -1) {

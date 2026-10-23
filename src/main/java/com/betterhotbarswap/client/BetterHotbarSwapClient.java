@@ -15,7 +15,9 @@ import com.betterhotbarswap.client.debug.BHSDebug;
 public final class BetterHotbarSwapClient implements ClientModInitializer {
     // Açılış damgası: HANGİ build'in çalıştığını latest.log'dan kanıtlar
     // (bayat-build testlerini bitirir). Her dağıtımdan önce BUMP edilir.
-    private static final String BUILD_ID = "2026-10-23-1.21.8a";
+    private static final String BUILD_ID = "2026-10-23-1.21.9a";
+    // 1.21.9+: tuş kategorisi metin değil kayıtlı kimlik (dil anahtarı key.category.betterhotbarswap.main).
+    public static final KeyBinding.Category CATEGORY = KeyBinding.Category.create(net.minecraft.util.Identifier.of("betterhotbarswap", "main"));
     private static KeyBinding settingsKey;
     private static KeyBinding hotbar10Key;
     private static KeyBinding toolbarsKey;
@@ -49,33 +51,33 @@ public final class BetterHotbarSwapClient implements ClientModInitializer {
             "key.betterhotbarswap.settings",
             InputUtil.Type.KEYSYM,
             GLFW.GLFW_KEY_UNKNOWN,
-            "category.betterhotbarswap"
+            CATEGORY
         ));
         hotbar10Key = KeyBindingHelper.registerKeyBinding(new KeyBinding(
             "key.betterhotbarswap.hotbar10",
             InputUtil.Type.KEYSYM,
             GLFW.GLFW_KEY_UNKNOWN,
-            "category.betterhotbarswap"
+            CATEGORY
         ));
         // Araç çubukları ekranı: varsayılan H (vanilla'da boş), Kontroller'den değişir.
         toolbarsKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
             "key.betterhotbarswap.toolbars",
             InputUtil.Type.KEYSYM,
             GLFW.GLFW_KEY_H,
-            "category.betterhotbarswap"
+            CATEGORY
         ));
         // Varsayılan N/M: vanilla'da boş.
         toolbarSaveKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
             "key.betterhotbarswap.toolbar_save",
             InputUtil.Type.KEYSYM,
             GLFW.GLFW_KEY_N,
-            "category.betterhotbarswap"
+            CATEGORY
         ));
         toolbarLoadKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
             "key.betterhotbarswap.toolbar_load",
             InputUtil.Type.KEYSYM,
             GLFW.GLFW_KEY_M,
-            "category.betterhotbarswap"
+            CATEGORY
         ));
 
         ClientTickEvents.START_CLIENT_TICK.register(com.betterhotbarswap.client.toolbar.SurvivalToolbars::onStartTick);

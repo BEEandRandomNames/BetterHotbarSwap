@@ -15,7 +15,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(Keyboard.class)
 public final class KeyboardReleaseMixin {
     @Inject(method = "onKey", at = @At("HEAD"))
-    private void betterhotbarswap$onKey(long window, int key, int scancode, int action, int modifiers, CallbackInfo ci) {
+    private void betterhotbarswap$onKey(long window, int action, net.minecraft.client.input.KeyInput input, CallbackInfo ci) {
+        int key = input.key();
+        int scancode = input.scancode();
         if (action == GLFW.GLFW_RELEASE) {
             HotbarInputController.releasePressed(key);
         } else if (action == GLFW.GLFW_PRESS) {

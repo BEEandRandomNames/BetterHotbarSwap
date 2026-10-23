@@ -50,11 +50,11 @@ public final class BHSConfigScreen extends Screen {
                 KeyBinding[] keys = client.options.allKeys.clone();
                 java.util.Arrays.sort(keys);
                 int row = 0;
-                String last = null;
+                KeyBinding.Category last = null;
                 for (KeyBinding k : keys) {
                     if (!k.getCategory().equals(last)) {
                         last = k.getCategory();
-                        if (last.equals("category.betterhotbarswap")) break;
+                        if (last.equals(com.betterhotbarswap.client.BetterHotbarSwapClient.CATEGORY)) break;
                         row++;
                     }
                     row++;

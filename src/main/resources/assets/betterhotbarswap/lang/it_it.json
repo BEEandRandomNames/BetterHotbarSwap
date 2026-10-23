@@ -36,5 +36,7 @@
   "modmenu.descriptionTranslation.betterhotbarswap": "Rende il sistema di assegnazione dei tasti rapidi di Minecraft più funzionale e intelligente. Inoltre permette un modo del tutto nuovo di usare i tasti rapidi.",
   "betterhotbarswap.update.title": "Aggiornamento di %s",
   "betterhotbarswap.update.message": "È disponibile %1$s %2$s. Vuoi aggiornare la mod?",
-  "betterhotbarswap.update.later": "Non ora"
+  "betterhotbarswap.update.later": "Non ora",
+  "betterhotbarswap.toolbar.foreign": "Salvato in Minecraft %s, non disponibile qui",
+  "betterhotbarswap.toolbar.foreign_any": "Non disponibile in questo gioco"
 }

@@ -80,26 +80,26 @@ public final class BHSToolbarScreen extends Screen {
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         super.render(context, mouseX, mouseY, delta); // 1.20.2+: Screen.render arka plan + düğmeleri çizer; içerik üstüne
-        context.drawCenteredTextWithShadow(textRenderer, title, width / 2, 8, 0xFFFFFF);
+        context.drawCenteredTextWithShadow(textRenderer, title, width / 2, 8, 0xFFFFFFFF);
         if (!shown.isEmpty()) {
             context.drawCenteredTextWithShadow(textRenderer, Text.translatable("betterhotbarswap.toolbar.edit_hint"),
-                width / 2, 19, 0xA0A0A0);
+                width / 2, 19, 0xFFA0A0A0);
         }
         if (shown.isEmpty()) {
             context.drawCenteredTextWithShadow(textRenderer, Text.translatable("betterhotbarswap.toolbar.none"),
-                width / 2, height / 2 - 10, 0xA0A0A0);
+                width / 2, height / 2 - 10, 0xFFA0A0A0);
         }
         boolean hoveredBar = false;
         PlayerInventory inv = client.player != null ? client.player.getInventory() : null;
         for (int r = scroll; r < Math.min(shown.size(), scroll + visible); r++) {
             int idx = shown.get(r);
             int y = rowY(r);
-            context.drawTextWithShadow(textRenderer, String.valueOf(idx + 1), left + 2, y + 7, 0xFFFFFF);
+            context.drawTextWithShadow(textRenderer, String.valueOf(idx + 1), left + 2, y + 7, 0xFFFFFFFF);
             int hx = left + 14;
             // Oyunun KENDİ hotbar görseli (oyundakiyle birebir, kaynak paketine uyar).
             // Adı/API'si sürümle değişir: 1.20.1 widgets.png, 1.20.2+ "hud/hotbar" sprite'ı
             // (javap: InGameHud aynısını çiziyor). Port prosedüründe her sürüm kontrol edilir.
-            context.drawGuiTexture(net.minecraft.client.render.RenderLayer::getGuiTextured, HOTBAR, hx, y, HOTBAR_W, 22);
+            context.drawGuiTexture(net.minecraft.client.gl.RenderPipelines.GUI_TEXTURED, HOTBAR, hx, y, HOTBAR_W, 22);
             boolean over = mouseX >= hx && mouseX < hx + HOTBAR_W && mouseY >= y && mouseY < y + 22;
             java.util.List<ItemStack> entry = SurvivalToolbars.storage(client).get(idx);
             for (int s = 0; s < 9; s++) {
@@ -110,25 +110,25 @@ public final class BHSToolbarScreen extends Screen {
                 context.drawItem(st, ix, iy);
                 context.drawStackOverlay(textRenderer, st, ix, iy);
                 if (inv != null && !has(inv, st)) {
-                    context.fill(ix, iy, ix + 16, iy + 16, 300, 0x66FF0000);
+                    context.fill(ix, iy, ix + 16, iy + 16, 0x66FF0000);
                 }
             }
             // Tıklanabilir hissi: üstüne gelince tüm çubuk beyazlaşır.
             if (over) {
-                context.fill(hx, y, hx + HOTBAR_W, y + 22, 310, 0x60FFFFFF);
+                context.fill(hx, y, hx + HOTBAR_W, y + 22, 0x60FFFFFF);
                 hoveredBar = true;
             }
         }
         if (maxScroll() > 0) {
             int h = visible * ROW_H;
             int th = Math.max(16, h * visible / shown.size());
-            context.drawGuiTexture(net.minecraft.client.render.RenderLayer::getGuiTextured, SCROLLER_BG, barX(), top, BAR_W, h);
-            context.drawGuiTexture(net.minecraft.client.render.RenderLayer::getGuiTextured, SCROLLER, barX(), top + (h - th) * scroll / maxScroll(), BAR_W, th);
+            context.drawGuiTexture(net.minecraft.client.gl.RenderPipelines.GUI_TEXTURED, SCROLLER_BG, barX(), top, BAR_W, h);
+            context.drawGuiTexture(net.minecraft.client.gl.RenderPipelines.GUI_TEXTURED, SCROLLER, barX(), top + (h - th) * scroll / maxScroll(), BAR_W, th);
         }
         Text hint = Text.translatable("betterhotbarswap.toolbar.hint",
             com.betterhotbarswap.client.BetterHotbarSwapClient.getToolbarSaveKey().getBoundKeyLocalizedText(),
             com.betterhotbarswap.client.BetterHotbarSwapClient.getToolbarLoadKey().getBoundKeyLocalizedText());
-        context.drawCenteredTextWithShadow(textRenderer, hint, width / 2, height - 42, 0xA0A0A0);
+        context.drawCenteredTextWithShadow(textRenderer, hint, width / 2, height - 42, 0xFFA0A0A0);
         long since = System.currentTimeMillis() - savedAtMs;
         int savedRow = shown.indexOf(savedIndex);
         if (since < SAVED_SHOW_MS && savedRow >= scroll && savedRow < scroll + visible) {

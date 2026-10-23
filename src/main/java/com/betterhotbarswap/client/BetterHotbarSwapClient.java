@@ -9,13 +9,13 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.util.InputUtil;
 import org.lwjgl.glfw.GLFW;
-import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
+import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import com.betterhotbarswap.client.debug.BHSDebug;
 
 public final class BetterHotbarSwapClient implements ClientModInitializer {
     // Açılış damgası: HANGİ build'in çalıştığını latest.log'dan kanıtlar
     // (bayat-build testlerini bitirir). Her dağıtımdan önce BUMP edilir.
-    private static final String BUILD_ID = "2026-10-23-1.21.5a";
+    private static final String BUILD_ID = "2026-10-23-1.21.6a";
     private static KeyBinding settingsKey;
     private static KeyBinding hotbar10Key;
     private static KeyBinding toolbarsKey;
@@ -80,7 +80,8 @@ public final class BetterHotbarSwapClient implements ClientModInitializer {
 
         ClientTickEvents.START_CLIENT_TICK.register(com.betterhotbarswap.client.toolbar.SurvivalToolbars::onStartTick);
         ClientTickEvents.END_CLIENT_TICK.register(BetterHotbarSwapClient::onClientTick);
-        HudRenderCallback.EVENT.register((drawContext, tickDelta) -> BHSDebug.render(drawContext));
+        // 1.21.6+: HudRenderCallback eskidi (Fabric API), yerine HUD öğesi.
+        HudElementRegistry.addLast(net.minecraft.util.Identifier.of("betterhotbarswap", "debug"), (drawContext, tickCounter) -> BHSDebug.render(drawContext));
     }
 
     private static void onClientTick(MinecraftClient client) {

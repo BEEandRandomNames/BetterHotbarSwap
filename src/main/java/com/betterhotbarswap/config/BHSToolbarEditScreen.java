@@ -111,16 +111,16 @@ public final class BHSToolbarEditScreen extends Screen {
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         super.render(context, mouseX, mouseY, delta); // 1.20.2+: Screen.render arka plan + düğmeleri çizer; içerik üstüne
-        context.drawCenteredTextWithShadow(textRenderer, title, width / 2, 12, 0xFFFFFF);
+        context.drawCenteredTextWithShadow(textRenderer, title, width / 2, 12, 0xFFFFFFFF);
         int ty = 24;
         for (OrderedText line : textRenderer.wrapLines(Text.translatable("betterhotbarswap.toolbar.edit_help"), width - 40)) {
-            context.drawCenteredTextWithShadow(textRenderer, line, width / 2, ty, 0xA0A0A0);
+            context.drawCenteredTextWithShadow(textRenderer, line, width / 2, ty, 0xFFA0A0A0);
             ty += 10;
         }
         panel(context, px, py, PANEL_W, PANEL_H);
         // Sol el slotu için küçük panel (vanilla HUD'daki gibi hotbar'ın solunda).
         panel(context, px + OFF_X - 4, py + 71, 26, 26);
-        context.drawText(textRenderer, Text.translatable("container.inventory"), px + 8, py + 6, 0x404040, false);
+        context.drawText(textRenderer, Text.translatable("container.inventory"), px + 8, py + 6, 0xFF404040, false);
         PlayerInventory inv = client.player != null ? client.player.getInventory() : null;
         int hovered = slotAt(mouseX, mouseY);
         for (int t = 0; t < ToolbarStorage.SIZE; t++) {
@@ -131,20 +131,18 @@ public final class BHSToolbarEditScreen extends Screen {
             // Boş sol el: vanilla'nın kalkan silüeti (kaynak paketine de uyar).
             if (t == ToolbarStorage.OFFHAND && st.isEmpty()) {
                 // 1.21.4+: boş slot simgeleri GUI sprite'ı (container/slot/shield).
-                context.drawGuiTexture(net.minecraft.client.render.RenderLayer::getGuiTextured,
+                context.drawGuiTexture(net.minecraft.client.gl.RenderPipelines.GUI_TEXTURED,
                     net.minecraft.screen.PlayerScreenHandler.EMPTY_OFF_HAND_SLOT_TEXTURE, x + 1, y + 1, 16, 16);
             }
             context.drawItem(st, x + 1, y + 1);
             context.drawStackOverlay(textRenderer, st, x + 1, y + 1);
-            if (inv != null && !st.isEmpty() && !has(inv, st)) context.fill(x + 1, y + 1, x + 17, y + 17, 300, 0x66FF0000);
-            if (t == hovered) context.fill(x + 1, y + 1, x + 17, y + 17, 300, 0x80FFFFFF);
+            if (inv != null && !st.isEmpty() && !has(inv, st)) context.fill(x + 1, y + 1, x + 17, y + 17, 0x66FF0000);
+            if (t == hovered) context.fill(x + 1, y + 1, x + 17, y + 17, 0x80FFFFFF);
         }
         if (!cursor.isEmpty()) {
-            context.getMatrices().push();
-            context.getMatrices().translate(0, 0, 400);
+            // 1.21.6+: z yok; en son çizilen üstte kalır.
             context.drawItem(cursor, mouseX - 8, mouseY - 8);
             context.drawStackOverlay(textRenderer, cursor, mouseX - 8, mouseY - 8);
-            context.getMatrices().pop();
         } else if (hovered >= 0 && !slots[hovered].isEmpty()) {
             context.drawItemTooltip(textRenderer, slots[hovered], mouseX, mouseY);
         }

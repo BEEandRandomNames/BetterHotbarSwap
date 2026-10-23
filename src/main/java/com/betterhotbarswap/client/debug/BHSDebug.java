@@ -83,10 +83,10 @@ public final class BHSDebug {
         if (client == null || client.player == null) return;
         if (!BHSConfig.debugEnabled) return;
         int y = 5;
-        context.drawTextWithShadow(client.textRenderer, Text.literal("[BHS] " + lastInfo + " | Hotbar:" + lastHotbar), 5, y, 0x00FF00);
+        context.drawTextWithShadow(client.textRenderer, Text.literal("[BHS] " + lastInfo + " | Hotbar:" + lastHotbar), 5, y, 0xFF00FF00);
         y += 12;
         for (String line : LINES) {
-            context.drawTextWithShadow(client.textRenderer, Text.literal(line), 5, y, 0xFFFF00);
+            context.drawTextWithShadow(client.textRenderer, Text.literal(line), 5, y, 0xFFFFFF00);
             y += 10;
         }
     }

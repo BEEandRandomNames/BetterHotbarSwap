@@ -130,9 +130,9 @@ public final class BHSToolbarEditScreen extends Screen {
             ItemStack st = slots[t];
             // Boş sol el: vanilla'nın kalkan silüeti (kaynak paketine de uyar).
             if (t == ToolbarStorage.OFFHAND && st.isEmpty()) {
-                context.drawSpriteStretched(net.minecraft.client.render.RenderLayer::getGuiTextured, client.getSpriteAtlas(
-                    net.minecraft.screen.PlayerScreenHandler.BLOCK_ATLAS_TEXTURE)
-                    .apply(net.minecraft.screen.PlayerScreenHandler.EMPTY_OFFHAND_ARMOR_SLOT), x + 1, y + 1, 16, 16);
+                // 1.21.4+: boş slot simgeleri GUI sprite'ı (container/slot/shield).
+                context.drawGuiTexture(net.minecraft.client.render.RenderLayer::getGuiTextured,
+                    net.minecraft.screen.PlayerScreenHandler.EMPTY_OFF_HAND_SLOT_TEXTURE, x + 1, y + 1, 16, 16);
             }
             context.drawItem(st, x + 1, y + 1);
             context.drawStackOverlay(textRenderer, st, x + 1, y + 1);

@@ -60,7 +60,7 @@ public final class BHSConfigScreen extends Screen {
                     row++;
                 }
                 for (Element e : children()) {
-                    if (e instanceof ControlsListWidget list) list.setScrollAmount(row * 20);
+                    if (e instanceof ControlsListWidget list) list.setScrollY(row * 20); // 1.21.4+: setScrollAmount -> setScrollY
                 }
             }
         };

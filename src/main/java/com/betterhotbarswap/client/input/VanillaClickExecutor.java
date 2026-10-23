@@ -78,8 +78,8 @@ public class VanillaClickExecutor {
     }
     private static String snapshot(PlayerInventory inv) {
         StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < inv.main.size(); i++) {
-            ItemStack s = inv.main.get(i);
+        for (int i = 0; i < inv.getMainStacks().size(); i++) {
+            ItemStack s = inv.getMainStacks().get(i);
             if (!s.isEmpty()) {
                 try {
                     sb.append(i).append('=').append(s.getName().getString()).append('x').append(s.getCount()).append(';');
@@ -88,9 +88,9 @@ public class VanillaClickExecutor {
                 }
             }
         }
-        if (!inv.offHand.get(0).isEmpty()) {
+        if (!inv.getStack(PlayerInventory.OFF_HAND_SLOT).isEmpty()) {
             try {
-                sb.append("off=").append(inv.offHand.get(0).getName().getString()).append(';');
+                sb.append("off=").append(inv.getStack(PlayerInventory.OFF_HAND_SLOT).getName().getString()).append(';');
             } catch (Exception e) {
                 sb.append("off=?;");
             }

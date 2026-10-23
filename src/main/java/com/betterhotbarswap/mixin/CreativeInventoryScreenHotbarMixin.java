@@ -49,18 +49,17 @@ public class CreativeInventoryScreenHotbarMixin {
     // Tüm envanterin kompakt fotoğrafı (sadece dolu slotlar). latest.log'a [BHS-INV] ile düşer.
     private static String snapshot(PlayerInventory inv) {
         StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < inv.main.size(); i++) {
-            ItemStack s = inv.main.get(i);
+        for (int i = 0; i < inv.getMainStacks().size(); i++) {
+            ItemStack s = inv.getMainStacks().get(i);
             if (!s.isEmpty()) sb.append(i).append('=').append(shortStack(s)).append(';');
         }
-        for (int i = 0; i < inv.armor.size(); i++) {
-            ItemStack s = inv.armor.get(i);
+        // 1.21.5+: zırh/sol el ayrı liste değil; getStack 36-39 zırh, 40 sol el.
+        for (int i = 0; i < 4; i++) {
+            ItemStack s = inv.getStack(36 + i);
             if (!s.isEmpty()) sb.append('a').append(i).append('=').append(shortStack(s)).append(';');
         }
-        for (int i = 0; i < inv.offHand.size(); i++) {
-            ItemStack s = inv.offHand.get(i);
-            if (!s.isEmpty()) sb.append("off=").append(shortStack(s)).append(';');
-        }
+        ItemStack off = inv.getStack(PlayerInventory.OFF_HAND_SLOT);
+        if (!off.isEmpty()) sb.append("off=").append(shortStack(off)).append(';');
         return sb.length() == 0 ? "empty" : sb.toString();
     }
     // Hotbar Önceliği: basılan slot hariç, basılana en yakın boş hotbar slotu. Eşitlikte küçük index kazanır.
@@ -143,7 +142,7 @@ public class CreativeInventoryScreenHotbarMixin {
         }
         CreativeInventoryScreen screen = (CreativeInventoryScreen)(Object)this;
         int prevSelMixed = -1;
-        try { prevSelMixed = client.player.getInventory().selectedSlot; } catch (Exception ignored) {}
+        try { prevSelMixed = client.player.getInventory().getSelectedSlot(); } catch (Exception ignored) {}
         Slot focusedSlot = ((HandledScreenAccessor) screen).betterhotbarswap$getFocusedSlot();
         BHSDebug.update(focusedSlot, hotbarIndex);
         if (focusedSlot == null) {
@@ -257,13 +256,13 @@ public class CreativeInventoryScreenHotbarMixin {
             // Drop BAŞARISIZ olursa eski korunur (sessiz silme YOK).
             boolean dropped = false;
             if (remaining > 0) {
-                int prevSel = playerInv.selectedSlot;
+                int prevSel = playerInv.getSelectedSlot();
                 try {
-                    playerInv.selectedSlot = hotbarIndex;
+                    playerInv.setSelectedSlot(hotbarIndex);
                     client.player.networkHandler.sendPacket(new UpdateSelectedSlotC2SPacket(hotbarIndex));
                     dropped = client.player.dropSelectedItem(true);
                 } finally {
-                    playerInv.selectedSlot = prevSel;
+                    playerInv.setSelectedSlot(prevSel);
                     try { client.player.networkHandler.sendPacket(new UpdateSelectedSlotC2SPacket(prevSel)); } catch (Exception ignored) {}
                 }
                 if (!dropped) {
@@ -333,7 +332,7 @@ public class CreativeInventoryScreenHotbarMixin {
         if (client.player == null) return;
         CreativeInventoryScreen screen = (CreativeInventoryScreen)(Object)this;
         int prevSelMixed = -1;
-        try { prevSelMixed = client.player.getInventory().selectedSlot; } catch (Exception ignored) {}
+        try { prevSelMixed = client.player.getInventory().getSelectedSlot(); } catch (Exception ignored) {}
         Slot focusedSlot = ((HandledScreenAccessor) screen).betterhotbarswap$getFocusedSlot();
         boolean onListItem = focusedSlot != null && focusedSlot.hasStack()
             && !(focusedSlot.inventory instanceof PlayerInventory);

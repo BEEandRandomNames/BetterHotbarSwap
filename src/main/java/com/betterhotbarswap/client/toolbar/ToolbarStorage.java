@@ -9,6 +9,7 @@ import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtHelper;
 import net.minecraft.nbt.NbtIo;
 import net.minecraft.nbt.NbtList;
+import net.minecraft.nbt.NbtOps;
 import net.minecraft.registry.BuiltinRegistries;
 import net.minecraft.registry.RegistryWrapper;
 import net.minecraft.util.collection.DefaultedList;
@@ -76,12 +77,12 @@ public final class ToolbarStorage {
             if (nbt == null) return;
             nbt = DataFixTypes.HOTBAR.update(fixer, nbt, NbtHelper.getDataVersion(nbt, 1343));
             for (int i = 0; i < 9; i++) {
-                NbtList list = nbt.getList(String.valueOf(i), NbtCompound.COMPOUND_TYPE);
+                NbtList list = nbt.getListOrEmpty(String.valueOf(i));
                 for (int j = 0; j < Math.min(list.size(), SIZE); j++) {
-                    NbtCompound c = list.getCompound(j);
-                    ItemStack s = ItemStack.fromNbtOrEmpty(lookup, c);
+                    NbtCompound c = list.getCompoundOrEmpty(j);
+                    ItemStack s = ItemStack.OPTIONAL_CODEC.parse(lookup.getOps(NbtOps.INSTANCE), c).result().orElse(ItemStack.EMPTY);
                     bars[i].set(j, s);
-                    if (s.isEmpty() && c.contains("id") && !"minecraft:air".equals(c.getString("id"))) undecoded[i][j] = c;
+                    if (s.isEmpty() && c.contains("id") && !"minecraft:air".equals(c.getString("id", ""))) undecoded[i][j] = c;
                 }
             }
         } catch (Exception e) {
@@ -98,7 +99,7 @@ public final class ToolbarStorage {
                 NbtList list = new NbtList();
                 for (int j = 0; j < SIZE; j++) {
                     ItemStack s = bars[i].get(j);
-                    list.add(s.isEmpty() && undecoded[i][j] != null ? undecoded[i][j] : s.toNbtAllowEmpty(lookup));
+                    list.add(s.isEmpty() && undecoded[i][j] != null ? undecoded[i][j] : ItemStack.OPTIONAL_CODEC.encodeStart(lookup.getOps(NbtOps.INSTANCE), s).getOrThrow());
                 }
                 root.put(String.valueOf(i), list);
             }

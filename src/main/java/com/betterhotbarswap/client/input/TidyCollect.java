@@ -181,7 +181,7 @@ public final class TidyCollect {
             if (!canTake(h, slot)) return false;
             int anchor = HotbarInputController.latchedHotbar();
             inRedirect = true;
-            int prevSel = client.player.getInventory().selectedSlot;
+            int prevSel = client.player.getInventory().getSelectedSlot();
             ItemStack pre = slot.getStack().copy();
             resetWall(h);
             boolean ok = takeStackIntoOrder(client, client.player.getInventory(), slot, anchor,

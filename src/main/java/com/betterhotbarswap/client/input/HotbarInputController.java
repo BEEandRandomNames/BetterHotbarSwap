@@ -90,9 +90,9 @@ public final class HotbarInputController {
             if (client == null || client.player == null) return;
             PlayerInventory inv = client.player.getInventory();
             if (prevSel < 0 || prevSel > 8) return;
-            if (inv.selectedSlot != prevSel) {
-                BHSDebug.log("SEL-RESTORE prev=" + prevSel + " cur=" + inv.selectedSlot + " -> geri alindi");
-                inv.selectedSlot = prevSel;
+            if (inv.getSelectedSlot() != prevSel) {
+                BHSDebug.log("SEL-RESTORE prev=" + prevSel + " cur=" + inv.getSelectedSlot() + " -> geri alindi");
+                inv.setSelectedSlot(prevSel);
                 try {
                     client.player.networkHandler.sendPacket(new net.minecraft.network.packet.c2s.play.UpdateSelectedSlotC2SPacket(prevSel));
                 } catch (Exception ignored) {}
@@ -222,7 +222,7 @@ public final class HotbarInputController {
 
     private static boolean handleHotkey(HandledScreen<?> screen, int keyCode, int hotbarIndex, int modifiers) {
         int prevSel = -1;
-        try { prevSel = MinecraftClient.getInstance().player.getInventory().selectedSlot; } catch (Exception ignored) {}
+        try { prevSel = MinecraftClient.getInstance().player.getInventory().getSelectedSlot(); } catch (Exception ignored) {}
         // Canlılık kaydı: basılı tuş HER olayda tazelenir (boş slotta gezerken
         // bile). Yoksa TTL dolar, tutuş "taze basış" sanılır, latch'ler ölür.
         // Taze/tekrar ayrımı için ÖNCE okunur.

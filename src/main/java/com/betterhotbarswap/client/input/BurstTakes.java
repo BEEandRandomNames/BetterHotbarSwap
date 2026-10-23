@@ -197,17 +197,22 @@ public final class BurstTakes {
                     // MERGE_FILL (kısmi + kalan). Bulk her zaman ON-kuralları.
                     int rem = fc - (max - oldHb.getCount());
                     int dest = findDest(sim, anchor, rem, hotbarIndex);
-                    if (dest == -1 || realIds.get(dest) == -1) break;
+                    // Envanterde yer yoksa (kullanıcı 2026-10-23) hedef yine 64'e tamamlanır,
+                    // imleçte kalan pencere dışına tıklanıp (-999) yere bırakılır.
+                    int destReal = dest == -1 ? -999 : realIds.get(dest);
+                    if (destReal == -1) break;
                     plan.clicks.add(new BurstClick(outputRealId, 0, SlotActionType.PICKUP));
                     plan.clicks.add(new BurstClick(hbRealId, 0, SlotActionType.PICKUP));
-                    plan.clicks.add(new BurstClick(realIds.get(dest), 0, SlotActionType.PICKUP));
+                    plan.clicks.add(new BurstClick(destReal, 0, SlotActionType.PICKUP));
                     ItemStack f = oldHb.copy();
                     f.setCount(max);
                     sim.put(hotbarIndex, f);
-                    ItemStack de = sim.get(dest);
-                    ItemStack dn = de.isEmpty() ? anchor.copy() : de.copy();
-                    dn.setCount(de.isEmpty() ? rem : de.getCount() + rem);
-                    sim.put(dest, dn);
+                    if (dest != -1) {
+                        ItemStack de = sim.get(dest);
+                        ItemStack dn = de.isEmpty() ? anchor.copy() : de.copy();
+                        dn.setCount(de.isEmpty() ? rem : de.getCount() + rem);
+                        sim.put(dest, dn);
+                    }
                     consumeGrid(grid, used);
                     simOut = refillOrEmpty(grid, used, anchor, r);
                     plan.crafts++;
@@ -215,13 +220,19 @@ public final class BurstTakes {
                 } else if (sameHb && oldHb.getCount() >= max && outputRealId != hbRealId) {
                     // OVERFLOW (hedef dolu, alım taşma hedefine). Bulk ON-kuralları.
                     int dest = findDest(sim, anchor, fc, hotbarIndex);
-                    if (dest == -1 || realIds.get(dest) == -1) break;
-                    plan.clicks.add(new BurstClick(outputRealId, 0, SlotActionType.PICKUP));
-                    plan.clicks.add(new BurstClick(realIds.get(dest), 0, SlotActionType.PICKUP));
-                    ItemStack de = sim.get(dest);
-                    ItemStack dn = de.isEmpty() ? anchor.copy() : de.copy();
-                    dn.setCount(de.isEmpty() ? fc : de.getCount() + fc);
-                    sim.put(dest, dn);
+                    if (dest == -1) {
+                        // Envanterde yer yok (kullanıcı 2026-10-23): üretim yere, çıktıya THROW (Ctrl+Q).
+                        // 1.21.2+ vanilla tek THROW'da kalan TÜM üretimi atar; sonrakiler boş çıktıda etkisiz.
+                        plan.clicks.add(new BurstClick(outputRealId, 1, SlotActionType.THROW));
+                    } else {
+                        if (realIds.get(dest) == -1) break;
+                        plan.clicks.add(new BurstClick(outputRealId, 0, SlotActionType.PICKUP));
+                        plan.clicks.add(new BurstClick(realIds.get(dest), 0, SlotActionType.PICKUP));
+                        ItemStack de = sim.get(dest);
+                        ItemStack dn = de.isEmpty() ? anchor.copy() : de.copy();
+                        dn.setCount(de.isEmpty() ? fc : de.getCount() + fc);
+                        sim.put(dest, dn);
+                    }
                     consumeGrid(grid, used);
                     simOut = refillOrEmpty(grid, used, anchor, r);
                     plan.crafts++;
@@ -230,7 +241,14 @@ public final class BurstTakes {
                     // PRIORITY (bulk her zaman ON-kuralları): önce SADECE evict
                     // SWAP'ı (output'a dokunmaz), sonra boşalan hedefin alımı.
                     int empty = nearestEvict(sim, hotbarIndex);
-                    if (empty == -1 || realIds.get(empty) == -1) break;
+                    if (empty == -1) {
+                        // Envanterde yer yok: eski eşya yere (F2 kuralı, THROW), hedef boşalır.
+                        plan.clicks.add(new BurstClick(hbRealId, 1, SlotActionType.THROW));
+                        sim.put(hotbarIndex, ItemStack.EMPTY);
+                        takes++;
+                        continue;
+                    }
+                    if (realIds.get(empty) == -1) break;
                     Integer emptyReal = realIds.get(empty);
                     if (empty < 9) {
                         plan.clicks.add(new BurstClick(hbRealId, empty, SlotActionType.SWAP));

@@ -31,8 +31,6 @@
   "betterhotbarswap.toolbar.hint": "ワールド内：%s+ショートカットで保存、%s+ショートカットで読込",
   "betterhotbarswap.toolbar.empty": "ツールバー %s は空です",
   "betterhotbarswap.toolbar.loaded": "ツールバー %s を読み込みました（%s/%s 個）",
-  "betterhotbarswap.msg.no_room": "空きがありません — インベントリに空きを作ってください。",
-  "betterhotbarswap.msg.stalled": "取得が止まりました — カーソルを空にして画面を開き直してください。",
   "betterhotbarswap.toolbar.saved": "保存しました",
   "modmenu.summaryTranslation.betterhotbarswap": "Minecraft のショートカット割り当てをもっと便利で賢くします。",
   "modmenu.descriptionTranslation.betterhotbarswap": "Minecraft のショートカット割り当てをもっと便利で賢くします。さらに、ショートカットのまったく新しい使い方を可能にします。",

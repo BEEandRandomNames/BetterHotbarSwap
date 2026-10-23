@@ -827,6 +827,20 @@ public class VanillaClickExecutor {
                     // Sandık gibi geri alabilen kaynakta vanilla takas yeterli (atma yok).
                     ItemStack oldHb = playerInv.getItem(hotbarIndex);
                     if (handler.getCarried().isEmpty() && !target.mayPlace(oldHb)) {
+                        // Toplu üretim (Shift, kullanıcı 2026-10-23): hedefteki AYNI ürün yığını asla
+                        // atılmaz; 64'e tamamlanır, sığmayan üretim yere (imleç pencere dışına / çıktıya THROW).
+                        if (forcePriority && isSameStackable(focusedStack, oldHb)) {
+                            if (oldHb.getCount() < oldHb.getMaxStackSize()) {
+                                BHSDebug.log("BULK sync=" + handler.containerId + " hb" + (hotbarIndex + 1) + " -> x" + oldHb.getMaxStackSize() + ", kalan yere");
+                                client.gameMode.handleContainerInput(handler.containerId, focusedSlotId, 0, ContainerInput.PICKUP, client.player);
+                                client.gameMode.handleContainerInput(handler.containerId, hotbarRealSlotId, 0, ContainerInput.PICKUP, client.player);
+                                client.gameMode.handleContainerInput(handler.containerId, -999, 0, ContainerInput.PICKUP, client.player);
+                            } else {
+                                BHSDebug.log("BULK sync=" + handler.containerId + " hb" + (hotbarIndex + 1) + " dolu, cikti x" + focusedStack.getCount() + " yere");
+                                client.gameMode.handleContainerInput(handler.containerId, focusedSlotId, 1, ContainerInput.THROW, client.player);
+                            }
+                            return true;
+                        }
                         BHSDebug.log("PRIORITY sync=" + handler.containerId + " eski hb" + (hotbarIndex + 1) + " x" + oldHb.getCount()
                             + " -> yere (dolu-dolu), sonra slot " + focusedSlotId + " -> hb" + (hotbarIndex + 1));
                         client.gameMode.handleContainerInput(handler.containerId, hotbarRealSlotId, 1, ContainerInput.THROW, client.player);

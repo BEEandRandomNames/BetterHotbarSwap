@@ -36,5 +36,7 @@
   "modmenu.descriptionTranslation.betterhotbarswap": "Делает систему назначения горячих клавиш Minecraft удобнее и умнее. Кроме того, он даёт совершенно новый способ использования горячих клавиш.",
   "betterhotbarswap.update.title": "Обновление %s",
   "betterhotbarswap.update.message": "Вышла версия %1$s %2$s. Хотите обновить мод?",
-  "betterhotbarswap.update.later": "Не сейчас"
+  "betterhotbarswap.update.later": "Не сейчас",
+  "betterhotbarswap.toolbar.foreign": "Сохранено в Minecraft %s, здесь недоступно",
+  "betterhotbarswap.toolbar.foreign_any": "Недоступно в этой игре"
 }

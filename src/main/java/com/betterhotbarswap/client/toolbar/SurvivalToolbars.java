@@ -128,7 +128,8 @@ public final class SurvivalToolbars {
         for (int pass = 0; pass < 2; pass++) {
             for (int t : ORDER) {
                 ItemStack want = tpl.get(t);
-                if (locked[t] || want.isEmpty()) continue;
+                // Yabancı (bu oyunda olmayan) eşya yüklenemez: yer tutucu bariyer asla taşınmaz.
+                if (locked[t] || want.isEmpty() || ToolbarStorage.foreign(want) != null) continue;
                 if (pass == 1 && sameItem(inv.getItem(invIndex(t)), want)) {
                     locked[t] = true;
                     continue;

@@ -1,6 +1,7 @@
 package com.betterhotbarswap.config;
 
 import com.betterhotbarswap.client.toolbar.SurvivalToolbars;
+import com.betterhotbarswap.client.toolbar.ToolbarIcons;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.tooltip.Tooltip;
@@ -107,8 +108,10 @@ public final class BHSToolbarScreen extends Screen {
                 if (st.isEmpty()) continue;
                 int ix = hx + 3 + s * 20;
                 int iy = y + 3;
-                context.drawItem(st, ix, iy);
-                context.drawStackOverlay(textRenderer, st, ix, iy);
+                if (!ToolbarIcons.draw(context, textRenderer, st, ix, iy)) {
+                    context.drawItem(st, ix, iy);
+                    context.drawStackOverlay(textRenderer, st, ix, iy);
+                }
                 if (inv != null && !has(inv, st)) {
                     context.fill(ix, iy, ix + 16, iy + 16, 0x66FF0000);
                 }

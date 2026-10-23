@@ -31,8 +31,6 @@
   "betterhotbarswap.toolbar.hint": "En el mundo: %s+atajo para guardar, %s+atajo para cargar",
   "betterhotbarswap.toolbar.empty": "La barra de herramientas %s está vacía",
   "betterhotbarswap.toolbar.loaded": "Barra de herramientas %s cargada (%s/%s objetos)",
-  "betterhotbarswap.msg.no_room": "No hay sitio — libera espacio en el inventario.",
-  "betterhotbarswap.msg.stalled": "La recogida se atascó — vacía el cursor y vuelve a abrir la pantalla.",
   "betterhotbarswap.toolbar.saved": "Guardado",
   "modmenu.summaryTranslation.betterhotbarswap": "Hace que el sistema de asignación de atajos de Minecraft sea más funcional e inteligente.",
   "modmenu.descriptionTranslation.betterhotbarswap": "Hace que el sistema de asignación de atajos de Minecraft sea más funcional e inteligente. Además, permite una forma totalmente nueva de usar los atajos.",

@@ -34,7 +34,6 @@ public final class TidyCollect {
     private static AbstractContainerMenu wallHandler;
     private static final boolean[] wallClaimed = new boolean[10];
     private static int lastTakenDest = -1;
-    private static long lastFullMsgMs;
 
     private static void resetWall(AbstractContainerMenu h) {
         if (wallHandler != h) {
@@ -189,8 +188,6 @@ public final class TidyCollect {
             if (ok) {
                 wallClaimed[anchor] = true;
                 BHSDebug.log("TIDY al-qm x" + pre.getCount() + " -> " + slotName(lastTakenDest));
-            } else {
-                tellFull(client);
             }
             return true;
         } catch (Exception e) {
@@ -345,19 +342,6 @@ public final class TidyCollect {
 
     public static int lastDest() {
         return lastTakenDest;
-    }
-
-    public static void tellFull(Minecraft client) {
-        try {
-            long now = System.currentTimeMillis();
-            if (now - lastFullMsgMs < 10000) return;
-            lastFullMsgMs = now;
-            if (client.player == null) return;
-            client.player.sendSystemMessage(
-                net.minecraft.network.chat.Component.translatable("betterhotbarswap.msg.no_room")
-                    .withStyle(net.minecraft.ChatFormatting.RED));
-        } catch (Exception ignored) {
-        }
     }
 
     private static boolean isSame(ItemStack a, ItemStack b) {

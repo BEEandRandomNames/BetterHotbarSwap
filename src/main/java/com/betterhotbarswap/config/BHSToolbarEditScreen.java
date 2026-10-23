@@ -1,6 +1,7 @@
 package com.betterhotbarswap.config;
 
 import com.betterhotbarswap.client.toolbar.SurvivalToolbars;
+import com.betterhotbarswap.client.toolbar.ToolbarIcons;
 import com.betterhotbarswap.client.toolbar.ToolbarStorage;
 import java.util.List;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -138,16 +139,23 @@ public final class BHSToolbarEditScreen extends Screen {
                 context.blitSprite(RenderPipelines.GUI_TEXTURED,
                     net.minecraft.world.inventory.InventoryMenu.EMPTY_ARMOR_SLOT_SHIELD, x + 1, y + 1, 16, 16);
             }
-            context.item(st, x + 1, y + 1);
-            context.itemDecorations(font, st, x + 1, y + 1);
+            if (!ToolbarIcons.draw(context, font, st, x + 1, y + 1)) {
+                context.item(st, x + 1, y + 1);
+                context.itemDecorations(font, st, x + 1, y + 1);
+            }
             if (inv != null && !st.isEmpty() && !has(inv, st)) context.fill(x + 1, y + 1, x + 17, y + 17, 0x66FF0000);
             if (t == hovered) context.fill(x + 1, y + 1, x + 17, y + 17, 0x80FFFFFF);
         }
         if (!cursor.isEmpty()) {
-            context.item(cursor, mouseX - 8, mouseY - 8);
-            context.itemDecorations(font, cursor, mouseX - 8, mouseY - 8);
+            if (!ToolbarIcons.draw(context, font, cursor, mouseX - 8, mouseY - 8)) {
+                context.item(cursor, mouseX - 8, mouseY - 8);
+                context.itemDecorations(font, cursor, mouseX - 8, mouseY - 8);
+            }
         } else if (hovered >= 0 && !slots[hovered].isEmpty()) {
-            context.setTooltipForNextFrame(font, slots[hovered], mouseX, mouseY);
+            // Yabancı eşya: kayıttaki adı + hangi sürümde kaydedildiği.
+            List<Component> foreign = ToolbarIcons.tooltip(slots[hovered]);
+            if (foreign != null) context.setComponentTooltipForNextFrame(font, foreign, mouseX, mouseY);
+            else context.setTooltipForNextFrame(font, slots[hovered], mouseX, mouseY);
         }
     }
 
